@@ -1,0 +1,33 @@
+# === Citlive soubory — NIKDY nepushovat ===
+# Obsahuje MT5 přihlašovací údaje (login, heslo).
+config.json
+config.json.bak
+
+# Logy
+trading.log
+*.log
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# === Virtuální prostredi ===
+.venv/
+venv/
+env/
+ENV/
+
+# === Build artefakty (pro budouci PyInstaller) ===
+build/
+dist/
+*.spec
+
+# === OS / editor ===
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

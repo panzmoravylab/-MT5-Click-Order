@@ -152,6 +152,10 @@ class SymbolPanel(QWidget):
             lbl.setStyleSheet("color: #94a3b8; font-size: 11px;")
 
         # Uspořádání do Gridu
+        grid.setColumnStretch(0, 0)
+        grid.setColumnStretch(1, 0)
+        grid.setColumnStretch(2, 1) # Consumes all empty space on the right, pushing left columns together!
+
         grid.addWidget(lbl_count, 0, 0)
         grid.addWidget(self.count_spin, 1, 0)
         grid.addWidget(lbl_lot, 0, 1)
@@ -181,93 +185,99 @@ class SymbolPanel(QWidget):
         grid.addWidget(lbl_tf, 5, 1)
         grid.addWidget(tf_container, 6, 1)
 
-        # Uložit jako výchozí tlačítko
-        self.save_defaults_btn = QPushButton("💾  Uložit jako výchozí")
+        # Uložit jako výchozí tlačítko - malá ikona v rohu vedle Timeframu
+        self.save_defaults_btn = QPushButton("💾")
+        self.save_defaults_btn.setToolTip("Uložit parametry jako výchozí")
+        self.save_defaults_btn.setFixedWidth(28)
         self.save_defaults_btn.setStyleSheet(
-            "QPushButton { background-color: #3b82f6; color: white; font-weight: bold; padding: 6px; border-radius: 4px; border: none; }"
+            "QPushButton { background-color: #3b82f6; border: none; border-radius: 4px; padding: 4px; }"
             "QPushButton:hover { background-color: #2563eb; }"
         )
         self.save_defaults_btn.clicked.connect(self._on_save_defaults)
-        grid.addWidget(self.save_defaults_btn, 8, 0, 1, 2)
+        grid.addWidget(self.save_defaults_btn, 6, 2)
 
         root.addWidget(params_box)
 
         # --- Akční tlačítka ----------------------------------------------
-        btn_row = QHBoxLayout()
-        btn_row.setSpacing(8)
+        # Řada 1: BUY & SELL vedle sebe
+        buy_sell_lay = QHBoxLayout()
+        buy_sell_lay.setSpacing(6)
 
         self.buy_btn = QPushButton("▲  BUY")
         self.buy_btn.setStyleSheet(
-            "QPushButton { background-color: #22c55e; color: white; "
-            "font-size: 13px; font-weight: bold; padding: 8px 16px; border-radius: 4px; border: none; }"
-            "QPushButton:hover { background-color: #16a34a; }"
+            "QPushButton { background-color: #15803d; border: 1px solid #22c55e; color: white; "
+            "font-size: 13px; font-weight: bold; padding: 8px 12px; border-radius: 5px; }"
+            "QPushButton:hover { background-color: #166534; }"
             "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
         )
         self.buy_btn.clicked.connect(lambda: self._emit_action("buy"))
 
         self.sell_btn = QPushButton("▼  SELL")
         self.sell_btn.setStyleSheet(
-            "QPushButton { background-color: #ef4444; color: white; "
-            "font-size: 13px; font-weight: bold; padding: 8px 16px; border-radius: 4px; border: none; }"
-            "QPushButton:hover { background-color: #dc2626; }"
+            "QPushButton { background-color: #b91c1c; border: 1px solid #ef4444; color: white; "
+            "font-size: 13px; font-weight: bold; padding: 8px 12px; border-radius: 5px; }"
+            "QPushButton:hover { background-color: #991b1b; }"
             "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
         )
         self.sell_btn.clicked.connect(lambda: self._emit_action("sell"))
 
+        buy_sell_lay.addWidget(self.buy_btn, 1)
+        buy_sell_lay.addWidget(self.sell_btn, 1)
+        root.addLayout(buy_sell_lay)
+
+        # Řada 2: CLOSE varianty (menší, pod nimi)
+        close_lay = QHBoxLayout()
+        close_lay.setSpacing(4)
+
         self.close_btn = QPushButton("CLOSE pár")
         self.close_btn.setStyleSheet(
-            "QPushButton { background-color: #475569; color: white; "
-            "font-size: 11px; font-weight: bold; padding: 8px; border-radius: 4px; border: none; }"
-            "QPushButton:hover { background-color: #334155; }"
+            "QPushButton { background-color: #334155; border: 1px solid #475569; color: white; "
+            "font-size: 10px; font-weight: bold; padding: 5px; border-radius: 4px; }"
+            "QPushButton:hover { background-color: #1e293b; }"
             "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
         )
         self.close_btn.clicked.connect(lambda: self._emit_action("close_symbol"))
 
         self.close_profit_btn = QPushButton("💰 CLOSE ZISK")
         self.close_profit_btn.setStyleSheet(
-            "QPushButton { background-color: #0d9488; color: white; "
-            "font-size: 11px; font-weight: bold; padding: 8px; border-radius: 4px; border: none; }"
-            "QPushButton:hover { background-color: #0f766e; }"
+            "QPushButton { background-color: #0f766e; border: 1px solid #0d9488; color: white; "
+            "font-size: 10px; font-weight: bold; padding: 5px; border-radius: 4px; }"
+            "QPushButton:hover { background-color: #115e59; }"
             "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
         )
         self.close_profit_btn.clicked.connect(lambda: self._emit_action("close_profitable"))
 
         self.close_all_btn = QPushButton("⚠ CLOSE ALL")
         self.close_all_btn.setStyleSheet(
-            "QPushButton { background-color: #ea580c; color: white; "
-            "font-size: 11px; font-weight: bold; padding: 8px; border-radius: 4px; border: none; }"
-            "QPushButton:hover { background-color: #c2410c; }"
+            "QPushButton { background-color: #c2410c; border: 1px solid #ea580c; color: white; "
+            "font-size: 10px; font-weight: bold; padding: 5px; border-radius: 4px; }"
+            "QPushButton:hover { background-color: #9a3412; }"
             "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
         )
         self.close_all_btn.clicked.connect(lambda: self._emit_action("close_all"))
 
-        btn_row.addWidget(self.buy_btn, 2)
-        btn_row.addWidget(self.sell_btn, 2)
-        btn_row.addWidget(self.close_btn, 1)
-        btn_row.addWidget(self.close_profit_btn, 1)
-        btn_row.addWidget(self.close_all_btn, 1)
-        root.addLayout(btn_row)
+        close_lay.addWidget(self.close_btn, 1)
+        close_lay.addWidget(self.close_profit_btn, 1)
+        close_lay.addWidget(self.close_all_btn, 1)
+        root.addLayout(close_lay)
 
         # --- Tabulka pozic -----------------------------------------------
         positions_box = QGroupBox("Všechny otevřené pozice")
         pv = QVBoxLayout(positions_box)
 
-        self.table = QTableWidget(0, 8)
-        self.table.setHorizontalHeaderLabels(["#", "Symbol", "Typ", "Lot", "Cena", "P/L", "Magic", "Akce"])
+        self.table = QTableWidget(0, 5)
+        self.table.setHorizontalHeaderLabels(["Symbol", "Typ", "P/L", "Komentář", "Akce"])
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setAlternatingRowColors(True)
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.setMinimumHeight(140)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        self.table.setMinimumHeight(120)
         pv.addWidget(self.table)
 
         self.positions_summary = QLabel("Žádné otevřené pozice.")
@@ -617,15 +627,10 @@ class SymbolPanel(QWidget):
             row = self.table.rowCount()
             self.table.insertRow(row)
             
-            # Ticket
-            ticket_item = QTableWidgetItem(str(p["ticket"]))
-            ticket_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.table.setItem(row, 0, ticket_item)
-            
             # Symbol
             symbol_item = QTableWidgetItem(p["symbol"])
             symbol_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.table.setItem(row, 1, symbol_item)
+            self.table.setItem(row, 0, symbol_item)
             
             # Type
             type_item = QTableWidgetItem(p["type"])
@@ -633,40 +638,30 @@ class SymbolPanel(QWidget):
             type_item.setForeground(
                 Qt.GlobalColor.green if p["type"] == "BUY" else Qt.GlobalColor.red
             )
-            self.table.setItem(row, 2, type_item)
+            self.table.setItem(row, 1, type_item)
             
-            # Volume
-            vol_item = QTableWidgetItem(f"{p['volume']:.2f}")
-            vol_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.table.setItem(row, 3, vol_item)
-            
-            # Open Price
-            price_item = QTableWidgetItem(f"{p['price_open']:.5f}")
-            price_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.table.setItem(row, 4, price_item)
-
             # Profit / Loss
             pl_item = QTableWidgetItem(f"{p['profit']:.2f}")
             pl_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             pl_color = Qt.GlobalColor.green if p["profit"] >= 0 else Qt.GlobalColor.red
             pl_item.setForeground(pl_color)
-            self.table.setItem(row, 5, pl_item)
+            self.table.setItem(row, 2, pl_item)
 
-            # Magic number
-            magic_item = QTableWidgetItem(str(p["magic"]))
-            magic_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.table.setItem(row, 6, magic_item)
+            # Comment (Timeframe)
+            comment_item = QTableWidgetItem(p.get("comment", ""))
+            comment_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.table.setItem(row, 3, comment_item)
             
             # Action: Close (❌) button
             close_btn = QPushButton("❌")
             close_btn.setToolTip("Zavřít tuto pozici")
             close_btn.setStyleSheet(
                 "QPushButton { background-color: transparent; border: none; font-weight: bold; font-size: 11px; padding: 2px; }"
-                "QPushButton:hover { background-color: #fee2e2; border-radius: 4px; }"
+                "QPushButton:hover { background-color: #ef4444; border-radius: 4px; }"
             )
             ticket = p["ticket"]
             close_btn.clicked.connect(lambda checked, t=ticket: self._close_single_position(t))
-            self.table.setCellWidget(row, 7, close_btn)
+            self.table.setCellWidget(row, 4, close_btn)
             
             total_pl += p["profit"]
 

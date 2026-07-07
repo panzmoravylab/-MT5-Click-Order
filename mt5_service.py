@@ -53,6 +53,7 @@ class PositionInfo:
     tp: float
     profit: float
     magic: int
+    comment: str
 
 
 def _is_initialized() -> bool:
@@ -379,6 +380,7 @@ def get_positions(symbol: str | None = None) -> list[PositionInfo]:
             tp=p.tp,
             profit=p.profit,
             magic=p.magic,
+            comment=p.comment,
         ))
     return result
 

@@ -130,9 +130,10 @@ QTabBar::tab {
     background-color: #1e293b;
     border: 1px solid #334155;
     border-bottom: none;
-    padding: 6px 12px;
+    padding: 4px 8px;
     color: #94a3b8;
     font-weight: bold;
+    font-size: 10px;
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
 }
@@ -290,7 +291,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Trading Panel — MetaTrader 5")
-        self.resize(520, 660)
+        self.resize(380, 680)
         self.setStyleSheet(TRADING_QSS)
 
         self._config = config_manager.load_config()
@@ -331,15 +332,21 @@ class MainWindow(QMainWindow):
 
         top.addStretch(1)
 
-        self.add_btn = QPushButton("+ Symbol")
+        self.add_btn = QPushButton("➕")
+        self.add_btn.setToolTip("Přidat symbol")
+        self.add_btn.setFixedWidth(28)
         self.add_btn.clicked.connect(self._add_symbol)
         top.addWidget(self.add_btn)
 
-        self.remove_btn = QPushButton("− Symbol")
+        self.remove_btn = QPushButton("➖")
+        self.remove_btn.setToolTip("Odebrat symbol")
+        self.remove_btn.setFixedWidth(28)
         self.remove_btn.clicked.connect(self._remove_symbol)
         top.addWidget(self.remove_btn)
 
-        self.settings_btn = QPushButton("⚙  Nastavení")
+        self.settings_btn = QPushButton("⚙")
+        self.settings_btn.setToolTip("Nastavení")
+        self.settings_btn.setFixedWidth(28)
         self.settings_btn.clicked.connect(self._open_settings)
         top.addWidget(self.settings_btn)
 

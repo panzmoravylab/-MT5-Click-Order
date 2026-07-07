@@ -167,4 +167,5 @@ class PollWorker(QThread):
             "tp": p.tp,
             "profit": p.profit,
             "magic": p.magic,
+            "comment": p.comment,
         }

@@ -89,26 +89,31 @@ class SymbolPanel(QWidget):
         self.count_spin = QSpinBox()
         self.count_spin.setRange(1, 100)
         self.count_spin.setSingleStep(1)
+        self.count_spin.setMaximumWidth(90)
 
         self.lot_spin = QDoubleSpinBox()
         self.lot_spin.setDecimals(2)
         self.lot_spin.setRange(0.01, 1000.0)
         self.lot_spin.setSingleStep(0.01)
+        self.lot_spin.setMaximumWidth(90)
         self.lot_spin.valueChanged.connect(self._update_sl_tp_labels)
 
         self.sl_spin = QSpinBox()
         self.sl_spin.setRange(0, 100000)
         self.sl_spin.setSingleStep(10)
+        self.sl_spin.setMaximumWidth(90)
         self.sl_spin.valueChanged.connect(self._update_sl_tp_labels)
 
         self.tp_spin = QSpinBox()
         self.tp_spin.setRange(0, 100000)
         self.tp_spin.setSingleStep(10)
+        self.tp_spin.setMaximumWidth(90)
         self.tp_spin.valueChanged.connect(self._update_sl_tp_labels)
 
         self.dev_spin = QSpinBox()
         self.dev_spin.setRange(0, 10000)
         self.dev_spin.setSingleStep(5)
+        self.dev_spin.setMaximumWidth(90)
         self.dev_spin.setToolTip("Maximální povolený skluz ceny (slippage) v bodech při vstupu. Běžně se nastavuje 20-50 bodů.")
 
         lbl_dev_info = QLabel("Max. skluz ceny v bodech.")
@@ -126,7 +131,7 @@ class SymbolPanel(QWidget):
             btn = QPushButton(tf)
             btn.setCheckable(True)
             btn.setStyleSheet(
-                "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-weight: bold; }"
+                "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 2px 5px; font-size: 10px; font-weight: bold; min-width: 30px; }"
                 "QPushButton:checked { background-color: #3b82f6; color: white; border-color: #2563eb; }"
                 "QPushButton:hover { background-color: #334155; color: #f1f5f9; }"
             )
@@ -285,14 +290,39 @@ class SymbolPanel(QWidget):
         for lbl in (lbl_stop_side, lbl_stop_price, lbl_stop_sl, lbl_stop_tp):
             lbl.setStyleSheet("font-weight: bold; font-size: 11px;")
             
-        self.stop_side_combo = QComboBox()
-        self.stop_side_combo.addItems(["BUY STOP", "SELL STOP"])
-        self.stop_side_combo.currentIndexChanged.connect(self._update_stop_lbls)
+        self.buy_stop_btn = QPushButton("BUY STOP")
+        self.buy_stop_btn.setCheckable(True)
+        self.buy_stop_btn.setChecked(True)
+        self.buy_stop_btn.setStyleSheet(
+            "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-weight: bold; }"
+            "QPushButton:checked { background-color: #22c55e; color: white; border-color: #16a34a; }"
+            "QPushButton:hover { background-color: #334155; }"
+        )
         
+        self.sell_stop_btn = QPushButton("SELL STOP")
+        self.sell_stop_btn.setCheckable(True)
+        self.sell_stop_btn.setStyleSheet(
+            "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-weight: bold; }"
+            "QPushButton:checked { background-color: #ef4444; color: white; border-color: #dc2626; }"
+            "QPushButton:hover { background-color: #334155; }"
+        )
+        
+        self.stop_type_group = QButtonGroup(self)
+        self.stop_type_group.addButton(self.buy_stop_btn)
+        self.stop_type_group.addButton(self.sell_stop_btn)
+        self.stop_type_group.buttonClicked.connect(self._update_stop_lbls)
+
+        type_lay = QHBoxLayout()
+        type_lay.setContentsMargins(0, 0, 0, 0)
+        type_lay.setSpacing(4)
+        type_lay.addWidget(self.buy_stop_btn)
+        type_lay.addWidget(self.sell_stop_btn)
+
         self.stop_price_spin = QDoubleSpinBox()
         self.stop_price_spin.setRange(0.0, 1_000_000.0)
         self.stop_price_spin.setDecimals(5)
         self.stop_price_spin.setSingleStep(0.1)
+        self.stop_price_spin.setMaximumWidth(95)
         self.stop_price_spin.valueChanged.connect(self._update_stop_lbls)
         
         self.update_price_btn = QPushButton("🔄")
@@ -308,11 +338,13 @@ class SymbolPanel(QWidget):
         self.stop_sl_spin = QSpinBox()
         self.stop_sl_spin.setRange(0, 100000)
         self.stop_sl_spin.setSingleStep(10)
+        self.stop_sl_spin.setMaximumWidth(80)
         self.stop_sl_spin.valueChanged.connect(self._update_stop_lbls)
         
         self.stop_tp_spin = QSpinBox()
         self.stop_tp_spin.setRange(0, 100000)
         self.stop_tp_spin.setSingleStep(10)
+        self.stop_tp_spin.setMaximumWidth(80)
         self.stop_tp_spin.valueChanged.connect(self._update_stop_lbls)
         
         # Stop dynamic labels for SL/TP values
@@ -336,7 +368,7 @@ class SymbolPanel(QWidget):
             btn = QPushButton(tf)
             btn.setCheckable(True)
             btn.setStyleSheet(
-                "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-weight: bold; }"
+                "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 2px 5px; font-size: 10px; font-weight: bold; min-width: 30px; }"
                 "QPushButton:checked { background-color: #3b82f6; color: white; border-color: #2563eb; }"
                 "QPushButton:hover { background-color: #334155; color: #f1f5f9; }"
             )
@@ -349,15 +381,15 @@ class SymbolPanel(QWidget):
         # Send button
         self.place_stop_btn = QPushButton("Odeslat STOP")
         self.place_stop_btn.setStyleSheet(
-            "QPushButton { background-color: #4f46e5; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px; border: none; }"
+            "QPushButton { background-color: #4f46e5; border: 1px solid #6366f1; color: white; font-weight: bold; padding: 8px 16px; border-radius: 5px; }"
             "QPushButton:hover { background-color: #4338ca; }"
-            "QPushButton:disabled { background-color: #9ca3af; }"
+            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
         )
         self.place_stop_btn.clicked.connect(self._on_place_stop)
         
         # Grid layout assembly
         stop_grid.addWidget(lbl_stop_side, 0, 0)
-        stop_grid.addWidget(self.stop_side_combo, 1, 0)
+        stop_grid.addLayout(type_lay, 1, 0)
         
         stop_grid.addWidget(lbl_stop_price, 0, 1)
         
@@ -435,11 +467,11 @@ class SymbolPanel(QWidget):
         tick = self._last_tick
         if not tick:
             return
-        is_buy = "BUY" in self.stop_side_combo.currentText()
+        is_buy = self.buy_stop_btn.isChecked()
         price = tick["ask"] if is_buy else tick["bid"]
         self.stop_price_spin.setValue(price)
 
-    def _update_stop_lbls(self) -> None:
+    def _update_stop_lbls(self, *args) -> None:
         entry = self.stop_price_spin.value()
         sl_pts = self.stop_sl_spin.value()
         tp_pts = self.stop_tp_spin.value()
@@ -450,7 +482,7 @@ class SymbolPanel(QWidget):
         tick_size = getattr(self, "_tick_size", None)
         lot_size = self.lot_spin.value()
         
-        is_buy = "BUY" in self.stop_side_combo.currentText()
+        is_buy = self.buy_stop_btn.isChecked()
         
         def get_money_str(pts: int) -> str:
             if pts <= 0 or not tick_value or not tick_size or tick_size == 0:
@@ -474,9 +506,10 @@ class SymbolPanel(QWidget):
             self.stop_tp_label.setText("Bez TP")
 
     def _on_place_stop(self) -> None:
+        is_buy = self.buy_stop_btn.isChecked()
         params = {
             "symbol": self._symbol,
-            "side": "BUY_STOP" if "BUY" in self.stop_side_combo.currentText() else "SELL_STOP",
+            "side": "BUY_STOP" if is_buy else "SELL_STOP",
             "lot_size": self.lot_spin.value(),
             "price": self.stop_price_spin.value(),
             "deviation": self.dev_spin.value(),
@@ -648,5 +681,5 @@ class SymbolPanel(QWidget):
     # -------------------------------------------------------- busy state
     def set_busy(self, busy: bool) -> None:
         """Při probíhající akci deaktivuje tlačítka (prevence dvojkliku)."""
-        for btn in (self.buy_btn, self.sell_btn, self.close_btn, self.close_profit_btn, self.close_all_btn, self.save_defaults_btn, self.place_stop_btn, self.update_price_btn):
+        for btn in (self.buy_btn, self.sell_btn, self.close_btn, self.close_profit_btn, self.close_all_btn, self.save_defaults_btn, self.place_stop_btn, self.update_price_btn, self.buy_stop_btn, self.sell_stop_btn):
             btn.setEnabled(not busy)

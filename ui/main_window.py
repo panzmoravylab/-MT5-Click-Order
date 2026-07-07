@@ -151,6 +151,7 @@ QTabBar::tab:hover {
 /* Table styling */
 QTableWidget {
     background-color: #1e293b;
+    alternate-background-color: #0f172a;
     border: 1px solid #334155;
     gridline-color: #334155;
     border-radius: 6px;

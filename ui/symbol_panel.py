@@ -321,6 +321,31 @@ class SymbolPanel(QWidget):
         self.stop_sl_label.setStyleSheet("color: #94a3b8; font-size: 10px;")
         self.stop_tp_label.setStyleSheet("color: #94a3b8; font-size: 10px;")
         
+        # Timeframe for Stop orders
+        lbl_stop_tf = QLabel("Komentář (Timeframe)")
+        lbl_stop_tf.setStyleSheet("font-weight: bold; font-size: 11px;")
+        
+        stop_tf_container = QWidget()
+        stop_tf_layout = QHBoxLayout(stop_tf_container)
+        stop_tf_layout.setContentsMargins(0, 0, 0, 0)
+        stop_tf_layout.setSpacing(4)
+        
+        self.stop_tf_group = QButtonGroup(self)
+        self.stop_tf_buttons = {}
+        for tf in ["M1", "M5", "M15", "M30", "H1"]:
+            btn = QPushButton(tf)
+            btn.setCheckable(True)
+            btn.setStyleSheet(
+                "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-weight: bold; }"
+                "QPushButton:checked { background-color: #3b82f6; color: white; border-color: #2563eb; }"
+                "QPushButton:hover { background-color: #334155; color: #f1f5f9; }"
+            )
+            self.stop_tf_group.addButton(btn)
+            stop_tf_layout.addWidget(btn)
+            self.stop_tf_buttons[tf] = btn
+            
+        self.stop_tf_buttons["M15"].setChecked(True)
+        
         # Send button
         self.place_stop_btn = QPushButton("Odeslat STOP")
         self.place_stop_btn.setStyleSheet(
@@ -333,6 +358,7 @@ class SymbolPanel(QWidget):
         # Grid layout assembly
         stop_grid.addWidget(lbl_stop_side, 0, 0)
         stop_grid.addWidget(self.stop_side_combo, 1, 0)
+        
         stop_grid.addWidget(lbl_stop_price, 0, 1)
         
         # Horizontal layout for price input and update button
@@ -342,13 +368,21 @@ class SymbolPanel(QWidget):
         price_lay.addWidget(self.stop_price_spin, 1)
         price_lay.addWidget(self.update_price_btn)
         stop_grid.addLayout(price_lay, 1, 1)
+        
         stop_grid.addWidget(lbl_stop_sl, 0, 2)
         stop_grid.addWidget(self.stop_sl_spin, 1, 2)
         stop_grid.addWidget(self.stop_sl_label, 2, 2)
+        
         stop_grid.addWidget(lbl_stop_tp, 0, 3)
         stop_grid.addWidget(self.stop_tp_spin, 1, 3)
         stop_grid.addWidget(self.stop_tp_label, 2, 3)
-        stop_grid.addWidget(self.place_stop_btn, 1, 4)
+        
+        # New Timeframe Row
+        stop_grid.addWidget(lbl_stop_tf, 3, 0, 1, 3)
+        stop_grid.addWidget(stop_tf_container, 4, 0, 1, 4)
+        
+        # Send Button in Column 4, spanning rows 3-4 next to TF buttons
+        stop_grid.addWidget(self.place_stop_btn, 3, 4, 2, 1)
         
         root.addWidget(stop_box)
 
@@ -457,7 +491,7 @@ class SymbolPanel(QWidget):
         params["sl"] = (entry - sl_pts * point) if (sl_pts > 0 and is_buy) else ((entry + sl_pts * point) if sl_pts > 0 else 0.0)
         params["tp"] = (entry + tp_pts * point) if (tp_pts > 0 and is_buy) else ((entry - tp_pts * point) if tp_pts > 0 else 0.0)
         
-        checked_btn = self.tf_group.checkedButton()
+        checked_btn = self.stop_tf_group.checkedButton()
         if checked_btn:
             params["comment"] = checked_btn.text()
             

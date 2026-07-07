@@ -65,7 +65,7 @@ class SymbolPanel(QWidget):
         header.addStretch(1)
 
         self.price_label = QLabel("Bid: —  |  Ask: —")
-        self.price_label.setStyleSheet("font-size: 14px; color: #2b6cb0; font-weight: bold;")
+        self.price_label.setStyleSheet("font-size: 14px; color: #38bdf8; font-weight: bold;")
         self.price_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         header.addWidget(self.price_label)
         root.addLayout(header)
@@ -126,9 +126,9 @@ class SymbolPanel(QWidget):
             btn = QPushButton(tf)
             btn.setCheckable(True)
             btn.setStyleSheet(
-                "QPushButton { background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; font-weight: bold; }"
-                "QPushButton:checked { background-color: #2563eb; color: white; border-color: #1d4ed8; }"
-                "QPushButton:hover { background-color: #e2e8f0; }"
+                "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-weight: bold; }"
+                "QPushButton:checked { background-color: #3b82f6; color: white; border-color: #2563eb; }"
+                "QPushButton:hover { background-color: #334155; color: #f1f5f9; }"
             )
             self.tf_group.addButton(btn)
             tf_layout.addWidget(btn)
@@ -144,7 +144,7 @@ class SymbolPanel(QWidget):
         self.sell_tp_label = QLabel("SELL TP: —")
         
         for lbl in (self.buy_sl_label, self.sell_sl_label, self.buy_tp_label, self.sell_tp_label):
-            lbl.setStyleSheet("color: #475569; font-size: 11px;")
+            lbl.setStyleSheet("color: #94a3b8; font-size: 11px;")
 
         # Uspořádání do Gridu
         grid.addWidget(lbl_count, 0, 0)
@@ -299,9 +299,9 @@ class SymbolPanel(QWidget):
         self.update_price_btn.setToolTip("Nastavit aktuální tržní cenu")
         self.update_price_btn.setFixedWidth(28)
         self.update_price_btn.setStyleSheet(
-            "QPushButton { background-color: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px; font-weight: bold; }"
-            "QPushButton:hover { background-color: #cbd5e1; }"
-            "QPushButton:disabled { background-color: #9ca3af; }"
+            "QPushButton { background-color: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 4px; padding: 2px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #334155; }"
+            "QPushButton:disabled { background-color: #0f172a; }"
         )
         self.update_price_btn.clicked.connect(self._on_update_stop_price)
         
@@ -318,8 +318,8 @@ class SymbolPanel(QWidget):
         # Stop dynamic labels for SL/TP values
         self.stop_sl_label = QLabel("Bez SL")
         self.stop_tp_label = QLabel("Bez TP")
-        self.stop_sl_label.setStyleSheet("color: #475569; font-size: 10px;")
-        self.stop_tp_label.setStyleSheet("color: #475569; font-size: 10px;")
+        self.stop_sl_label.setStyleSheet("color: #94a3b8; font-size: 10px;")
+        self.stop_tp_label.setStyleSheet("color: #94a3b8; font-size: 10px;")
         
         # Send button
         self.place_stop_btn = QPushButton("Odeslat STOP")

@@ -40,123 +40,182 @@ from ui.workers import ActionWorker, ConnectWorker, PollWorker
 
 
 TRADING_QSS = """
-QMainWindow {
-    background-color: #0b0f17;
+QMainWindow, QDialog, SymbolPanel, SettingsDialog, QTabWidget, QGroupBox, QWidget#centralWidget {
+    background-color: #0f172a; /* Slate 900 */
 }
 
-QWidget {
-    background-color: #0b0f17;
-    color: #cbd5e1;
+/* Base text color */
+QLabel, QCheckBox, QRadioButton, QGroupBox {
+    color: #e2e8f0; /* slate 200 - readable light grey */
     font-family: "Segoe UI", -apple-system, Roboto, sans-serif;
     font-size: 11px;
 }
 
+/* Explicitly style the price label to stand out */
+QLabel#priceLabel {
+    color: #38bdf8; /* sky blue */
+}
+
+/* Inputs styling */
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+    background-color: #1e293b; /* slate 800 */
+    border: 1px solid #475569; /* slate 600 */
+    border-radius: 4px;
+    padding: 3px 6px;
+    color: #f8fafc; /* slate 50 */
+    min-height: 18px;
+    selection-background-color: #3b82f6;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+    border: 1px solid #38bdf8;
+    background-color: #1e293b;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #1e293b;
+    border: 1px solid #475569;
+    color: #f8fafc;
+    selection-background-color: #3b82f6;
+}
+
+/* GroupBox styling */
 QGroupBox {
-    border: 1px solid #1e293b;
+    border: 1px solid #334155;
     border-radius: 6px;
     margin-top: 10px;
     font-weight: bold;
-    color: #38bdf8;
-    background-color: #0f172a;
-    padding: 6px;
+    color: #38bdf8; /* light blue title */
+    background-color: #1e293b;
+    padding: 8px;
 }
 
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
     left: 8px;
-    padding: 0 3px;
-}
-
-QSpinBox, QDoubleSpinBox, QLineEdit, QComboBox {
-    background-color: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 4px;
-    padding: 3px 6px;
-    color: #f8fafc;
-    min-height: 18px;
-}
-
-QSpinBox:focus, QDoubleSpinBox:focus, QLineEdit:focus, QComboBox:focus {
-    border: 1px solid #38bdf8;
-    background-color: #1e293b;
+    padding: 0 4px;
 }
 
 QPushButton {
-    background-color: #1e293b;
-    border: 1px solid #334155;
+    background-color: #334155;
+    border: 1px solid #475569;
     border-radius: 4px;
-    color: #f1f5f9;
+    color: #f8fafc;
     padding: 4px 8px;
     font-weight: bold;
 }
 
 QPushButton:hover {
-    background-color: #334155;
-}
-
-QPushButton:pressed {
     background-color: #475569;
 }
 
-QTabWidget::pane {
+QPushButton:pressed {
+    background-color: #1e293b;
+}
+
+QPushButton:disabled {
+    background-color: #0f172a;
+    color: #64748b;
     border: 1px solid #1e293b;
-    background-color: #0b0f17;
-    border-radius: 6px;
+}
+
+/* Tab widget */
+QTabWidget::pane {
+    border: 1px solid #334155;
+    background-color: #0f172a;
 }
 
 QTabBar::tab {
-    background-color: #0f172a;
-    border: 1px solid #1e293b;
+    background-color: #1e293b;
+    border: 1px solid #334155;
     border-bottom: none;
     padding: 6px 12px;
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
     color: #94a3b8;
     font-weight: bold;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
 }
 
 QTabBar::tab:selected {
-    background-color: #0b0f17;
+    background-color: #0f172a;
     color: #38bdf8;
     border-bottom: 2px solid #38bdf8;
 }
 
 QTabBar::tab:hover {
-    background-color: #1e293b;
+    background-color: #334155;
     color: #f1f5f9;
 }
 
+/* Table styling */
 QTableWidget {
-    background-color: #0f172a;
-    border: 1px solid #1e293b;
-    gridline-color: #1e293b;
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    gridline-color: #334155;
     border-radius: 6px;
+    color: #e2e8f0;
 }
 
 QTableWidget::item {
-    border-bottom: 1px solid #1e293b;
+    border-bottom: 1px solid #334155;
     padding: 2px;
 }
 
 QTableWidget::item:selected {
-    background-color: #334155;
-    color: #38bdf8;
+    background-color: #3b82f6;
+    color: white;
 }
 
 QHeaderView::section {
-    background-color: #1e293b;
+    background-color: #0f172a;
     color: #94a3b8;
     font-weight: bold;
     padding: 4px;
     border: none;
+    border-right: 1px solid #334155;
     border-bottom: 1px solid #334155;
+}
+
+/* ScrollBars */
+QScrollBar:vertical {
+    border: none;
+    background: #0f172a;
+    width: 8px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #475569;
+    min-height: 20px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #64748b;
+}
+
+QScrollBar:horizontal {
+    border: none;
+    background: #0f172a;
+    height: 8px;
+    margin: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #475569;
+    min-width: 20px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #64748b;
 }
 
 QStatusBar {
     background-color: #0f172a;
     color: #94a3b8;
-    border-top: 1px solid #1e293b;
+    border-top: 1px solid #334155;
 }
 """
 
@@ -252,6 +311,7 @@ class MainWindow(QMainWindow):
     # --------------------------------------------------------------- build
     def _build_ui(self) -> None:
         central = QWidget()
+        central.setObjectName("centralWidget")
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
         root.setContentsMargins(8, 8, 8, 8)

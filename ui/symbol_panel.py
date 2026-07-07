@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Panel pro jeden symbol — vstupy parametrů, akční tlačítka, tabulka pozic.
 
 Panel je soběstačný: dostane symbol a config, načte parametry, zobrazí live
@@ -52,382 +53,438 @@ class SymbolPanel(QWidget):
         self._load_params()
 
     # --------------------------------------------------------------- build
+    @staticmethod
+    def _spin_style() -> str:
+        return (
+            "QSpinBox, QDoubleSpinBox {"
+            "  background:#1e293b; color:#f8fafc; border:1px solid #334155;"
+            "  border-radius:3px; padding:1px 4px; max-height:22px; font-size:11px;"
+            "}"
+            "QSpinBox:focus, QDoubleSpinBox:focus { border-color:#38bdf8; }"
+        )
+
+    @staticmethod
+    def _tf_btn_style() -> str:
+        return (
+            "QPushButton { background:#1e293b; color:#64748b; border:1px solid #334155;"
+            "  border-radius:3px; padding:1px 5px; font-size:9px; font-weight:bold; min-width:26px; max-height:20px; }"
+            "QPushButton:checked { background:#3b82f6; color:white; border-color:#2563eb; }"
+            "QPushButton:hover { background:#334155; color:#e2e8f0; }"
+        )
+
+    @staticmethod
+    def _label_style() -> str:
+        return "color:#64748b; font-size:10px; font-weight:bold;"
+
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(5, 5, 5, 5)
+        root.setContentsMargins(6, 4, 6, 4)
         root.setSpacing(6)
 
-        # --- Hlavička: symbol + live cena ---------------------------------
-        header = QHBoxLayout()
+        # ── HEADER: symbol name + live price ──────────────────────────────
+        hdr = QHBoxLayout()
+        hdr.setSpacing(4)
         title = QLabel(self._symbol)
-        title.setStyleSheet("font-size: 18px; font-weight: bold;")
-        header.addWidget(title)
-        header.addStretch(1)
-
-        self.price_label = QLabel("Bid: —  |  Ask: —")
-        self.price_label.setStyleSheet("font-size: 14px; color: #38bdf8; font-weight: bold;")
+        title.setStyleSheet("font-size:15px; font-weight:bold; color:#f8fafc;")
+        self.price_label = QLabel("— / —")
+        self.price_label.setStyleSheet("font-size:12px; font-weight:bold; color:#38bdf8;")
         self.price_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        header.addWidget(self.price_label)
-        root.addLayout(header)
+        hdr.addWidget(title)
+        hdr.addStretch()
+        hdr.addWidget(self.price_label)
+        root.addLayout(hdr)
 
-        # --- Vstupy parametrů --------------------------------------------
-        params_box = QGroupBox("Parametry obchodu")
-        grid = QGridLayout(params_box)
-        grid.setHorizontalSpacing(20)
-        grid.setVerticalSpacing(8)
+        # ── PARAMS SECTION ────────────────────────────────────────────────
+        # Row 1: Pozic, Lot, Dev, TF buttons + Save defaults
+        params_grid = QGridLayout()
+        params_grid.setSpacing(4)
+        params_grid.setContentsMargins(0, 0, 0, 0)
 
-        lbl_count = QLabel("Počet pozic")
-        lbl_lot = QLabel("Velikost lotu")
-        lbl_sl = QLabel("SL (body)")
-        lbl_tp = QLabel("TP (body)")
-        lbl_dev = QLabel("Deviace (body)")
-        lbl_tf = QLabel("Komentář (Timeframe)")
-        
-        for lbl in (lbl_count, lbl_lot, lbl_sl, lbl_tp, lbl_dev, lbl_tf):
-            lbl.setStyleSheet("font-weight: bold;")
+        def make_lbl(text: str) -> QLabel:
+            l = QLabel(text)
+            l.setStyleSheet(self._label_style())
+            return l
+
+        spin_ss = self._spin_style()
 
         self.count_spin = QSpinBox()
         self.count_spin.setRange(1, 100)
-        self.count_spin.setSingleStep(1)
-        self.count_spin.setMaximumWidth(90)
+        self.count_spin.setStyleSheet(spin_ss)
+        self.count_spin.setFixedWidth(52)
+        self.count_spin.setFixedHeight(22)
 
         self.lot_spin = QDoubleSpinBox()
         self.lot_spin.setDecimals(2)
         self.lot_spin.setRange(0.01, 1000.0)
         self.lot_spin.setSingleStep(0.01)
-        self.lot_spin.setMaximumWidth(90)
+        self.lot_spin.setStyleSheet(spin_ss)
+        self.lot_spin.setFixedWidth(62)
+        self.lot_spin.setFixedHeight(22)
         self.lot_spin.valueChanged.connect(self._update_sl_tp_labels)
-
-        self.sl_spin = QSpinBox()
-        self.sl_spin.setRange(0, 100000)
-        self.sl_spin.setSingleStep(10)
-        self.sl_spin.setMaximumWidth(90)
-        self.sl_spin.valueChanged.connect(self._update_sl_tp_labels)
-
-        self.tp_spin = QSpinBox()
-        self.tp_spin.setRange(0, 100000)
-        self.tp_spin.setSingleStep(10)
-        self.tp_spin.setMaximumWidth(90)
-        self.tp_spin.valueChanged.connect(self._update_sl_tp_labels)
 
         self.dev_spin = QSpinBox()
         self.dev_spin.setRange(0, 10000)
         self.dev_spin.setSingleStep(5)
-        self.dev_spin.setMaximumWidth(90)
-        self.dev_spin.setToolTip("Maximální povolený skluz ceny (slippage) v bodech při vstupu. Běžně se nastavuje 20-50 bodů.")
+        self.dev_spin.setStyleSheet(spin_ss)
+        self.dev_spin.setFixedWidth(52)
+        self.dev_spin.setFixedHeight(22)
+        self.dev_spin.setToolTip("Slippage v bodech")
 
-        lbl_dev_info = QLabel("Max. skluz ceny v bodech.")
-        lbl_dev_info.setStyleSheet("color: #64748b; font-size: 11px;")
+        # Save default params button
+        self.save_defaults_btn = QPushButton("💾")
+        self.save_defaults_btn.setToolTip("Uložit jako výchozí")
+        self.save_defaults_btn.setFixedSize(20, 20)
+        self.save_defaults_btn.setStyleSheet(
+            "QPushButton { background:#3b82f6; border:none; border-radius:3px; font-size:10px; padding:0px; }"
+            "QPushButton:hover { background:#2563eb; }"
+        )
+        self.save_defaults_btn.clicked.connect(self._on_save_defaults)
 
-        # Timeframe comment selector
+        # Timeframe comment buttons
         tf_container = QWidget()
         tf_layout = QHBoxLayout(tf_container)
         tf_layout.setContentsMargins(0, 0, 0, 0)
-        tf_layout.setSpacing(4)
-        
+        tf_layout.setSpacing(3)
         self.tf_group = QButtonGroup(self)
         self.tf_buttons = {}
+        tf_ss = self._tf_btn_style()
         for tf in ["M1", "M5", "M15", "M30", "H1"]:
             btn = QPushButton(tf)
             btn.setCheckable(True)
-            btn.setStyleSheet(
-                "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 2px 5px; font-size: 10px; font-weight: bold; min-width: 30px; }"
-                "QPushButton:checked { background-color: #3b82f6; color: white; border-color: #2563eb; }"
-                "QPushButton:hover { background-color: #334155; color: #f1f5f9; }"
-            )
+            btn.setStyleSheet(tf_ss)
+            btn.setFixedHeight(20)
             self.tf_group.addButton(btn)
             tf_layout.addWidget(btn)
             self.tf_buttons[tf] = btn
-        
-        # Default timeframe M15
         self.tf_buttons["M15"].setChecked(True)
 
-        # Cílové SL/TP ceny popisky
-        self.buy_sl_label = QLabel("BUY SL: —")
-        self.sell_sl_label = QLabel("SELL SL: —")
-        self.buy_tp_label = QLabel("BUY TP: —")
-        self.sell_tp_label = QLabel("SELL TP: —")
-        
-        for lbl in (self.buy_sl_label, self.sell_sl_label, self.buy_tp_label, self.sell_tp_label):
-            lbl.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        params_grid.addWidget(make_lbl("Pozic"), 0, 0)
+        params_grid.addWidget(make_lbl("Lot"), 0, 1)
+        params_grid.addWidget(make_lbl("Dev"), 0, 2)
+        params_grid.addWidget(make_lbl("TF (komentář)"), 0, 3)
+        params_grid.addWidget(self.count_spin, 1, 0)
+        params_grid.addWidget(self.lot_spin, 1, 1)
+        params_grid.addWidget(self.dev_spin, 1, 2)
+        params_grid.addWidget(tf_container, 1, 3)
+        params_grid.addWidget(self.save_defaults_btn, 1, 4)
 
-        # Uspořádání do Gridu
-        grid.setColumnStretch(0, 0)
-        grid.setColumnStretch(1, 0)
-        grid.setColumnStretch(2, 1) # Consumes all empty space on the right, pushing left columns together!
+        root.addLayout(params_grid)
 
-        grid.addWidget(lbl_count, 0, 0)
-        grid.addWidget(self.count_spin, 1, 0)
-        grid.addWidget(lbl_lot, 0, 1)
-        grid.addWidget(self.lot_spin, 1, 1)
-        
-        grid.addWidget(lbl_sl, 2, 0)
-        grid.addWidget(self.sl_spin, 3, 0)
-        grid.addWidget(lbl_tp, 2, 1)
-        grid.addWidget(self.tp_spin, 3, 1)
-        
-        # SL dynamic labels below SL spinbox
-        sl_lbl_lay = QVBoxLayout()
-        sl_lbl_lay.addWidget(self.buy_sl_label)
-        sl_lbl_lay.addWidget(self.sell_sl_label)
-        grid.addLayout(sl_lbl_lay, 4, 0)
-        
-        # TP dynamic labels below TP spinbox
-        tp_lbl_lay = QVBoxLayout()
-        tp_lbl_lay.addWidget(self.buy_tp_label)
-        tp_lbl_lay.addWidget(self.sell_tp_label)
-        grid.addLayout(tp_lbl_lay, 4, 1)
+        # Row 2 (New Row): SL and TP fields on their own line with a small gap
+        sl_tp_row = QHBoxLayout()
+        sl_tp_row.setSpacing(12)
+        sl_tp_row.setContentsMargins(0, 0, 0, 0)
 
-        grid.addWidget(lbl_dev, 5, 0)
-        grid.addWidget(self.dev_spin, 6, 0)
-        grid.addWidget(lbl_dev_info, 7, 0)
-        
-        grid.addWidget(lbl_tf, 5, 1)
-        grid.addWidget(tf_container, 6, 1)
+        # SL inputs/labels layout
+        sl_lay = QHBoxLayout()
+        sl_lay.setSpacing(4)
+        sl_lay.setContentsMargins(0, 0, 0, 0)
+        self.sl_spin = QSpinBox()
+        self.sl_spin.setRange(0, 100000)
+        self.sl_spin.setSingleStep(10)
+        self.sl_spin.setStyleSheet(spin_ss)
+        self.sl_spin.setFixedWidth(65)
+        self.sl_spin.setFixedHeight(22)
+        self.sl_spin.valueChanged.connect(self._update_sl_tp_labels)
 
-        # Uložit jako výchozí tlačítko - malá ikona v rohu vedle Timeframu
-        self.save_defaults_btn = QPushButton("💾")
-        self.save_defaults_btn.setToolTip("Uložit parametry jako výchozí")
-        self.save_defaults_btn.setFixedWidth(28)
-        self.save_defaults_btn.setStyleSheet(
-            "QPushButton { background-color: #3b82f6; border: none; border-radius: 4px; padding: 4px; }"
-            "QPushButton:hover { background-color: #2563eb; }"
-        )
-        self.save_defaults_btn.clicked.connect(self._on_save_defaults)
-        grid.addWidget(self.save_defaults_btn, 6, 2)
+        self.sl_usd_label = QLabel("Bez SL")
+        self.sl_usd_label.setStyleSheet("color:#ef4444; font-size:12px; font-weight:bold;")
+        self.sl_price_label = QLabel("")
+        self.sl_price_label.setStyleSheet("color:#64748b; font-size:9px;")
 
-        root.addWidget(params_box)
+        sl_lay.addWidget(make_lbl("SL (body):"))
+        sl_lay.addWidget(self.sl_spin)
+        sl_lay.addWidget(self.sl_usd_label)
+        sl_lay.addWidget(self.sl_price_label)
 
-        # --- Akční tlačítka ----------------------------------------------
-        # Řada 1: BUY & SELL vedle sebe
-        buy_sell_lay = QHBoxLayout()
-        buy_sell_lay.setSpacing(6)
+        # TP inputs/labels layout
+        tp_lay = QHBoxLayout()
+        tp_lay.setSpacing(4)
+        tp_lay.setContentsMargins(0, 0, 0, 0)
+        self.tp_spin = QSpinBox()
+        self.tp_spin.setRange(0, 100000)
+        self.tp_spin.setSingleStep(10)
+        self.tp_spin.setStyleSheet(spin_ss)
+        self.tp_spin.setFixedWidth(65)
+        self.tp_spin.setFixedHeight(22)
+        self.tp_spin.valueChanged.connect(self._update_sl_tp_labels)
+
+        self.tp_usd_label = QLabel("Bez TP")
+        self.tp_usd_label.setStyleSheet("color:#22c55e; font-size:12px; font-weight:bold;")
+        self.tp_price_label = QLabel("")
+        self.tp_price_label.setStyleSheet("color:#64748b; font-size:9px;")
+
+        tp_lay.addWidget(make_lbl("TP (body):"))
+        tp_lay.addWidget(self.tp_spin)
+        tp_lay.addWidget(self.tp_usd_label)
+        tp_lay.addWidget(self.tp_price_label)
+
+        sl_tp_row.addLayout(sl_lay)
+        sl_tp_row.addLayout(tp_lay)
+        sl_tp_row.addStretch()
+
+        root.addLayout(sl_tp_row)
+
+        # Subtle separator
+        sep1 = QLabel()
+        sep1.setFixedHeight(1)
+        sep1.setStyleSheet("background:#1e293b;")
+        root.addWidget(sep1)
+
+        # ── BUY / SELL BUTTONS ────────────────────────────────────────────
+        buy_sell = QHBoxLayout()
+        buy_sell.setSpacing(5)
+        buy_sell.setContentsMargins(0, 0, 0, 0)
 
         self.buy_btn = QPushButton("▲  BUY")
+        self.buy_btn.setFixedHeight(34)
         self.buy_btn.setStyleSheet(
-            "QPushButton { background-color: #15803d; border: 1px solid #22c55e; color: white; "
-            "font-size: 13px; font-weight: bold; padding: 8px 12px; border-radius: 5px; }"
-            "QPushButton:hover { background-color: #166534; }"
-            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
+            "QPushButton { background:#15803d; border:1px solid #22c55e; color:white;"
+            "  font-size:13px; font-weight:bold; border-radius:4px; }"
+            "QPushButton:hover { background:#166534; }"
+            "QPushButton:disabled { background:#1e293b; color:#334155; border-color:#1e293b; }"
         )
         self.buy_btn.clicked.connect(lambda: self._emit_action("buy"))
 
         self.sell_btn = QPushButton("▼  SELL")
+        self.sell_btn.setFixedHeight(34)
         self.sell_btn.setStyleSheet(
-            "QPushButton { background-color: #b91c1c; border: 1px solid #ef4444; color: white; "
-            "font-size: 13px; font-weight: bold; padding: 8px 12px; border-radius: 5px; }"
-            "QPushButton:hover { background-color: #991b1b; }"
-            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
+            "QPushButton { background:#b91c1c; border:1px solid #ef4444; color:white;"
+            "  font-size:13px; font-weight:bold; border-radius:4px; }"
+            "QPushButton:hover { background:#991b1b; }"
+            "QPushButton:disabled { background:#1e293b; color:#334155; border-color:#1e293b; }"
         )
         self.sell_btn.clicked.connect(lambda: self._emit_action("sell"))
 
-        buy_sell_lay.addWidget(self.buy_btn, 1)
-        buy_sell_lay.addWidget(self.sell_btn, 1)
-        root.addLayout(buy_sell_lay)
+        buy_sell.addWidget(self.buy_btn, 1)
+        buy_sell.addWidget(self.sell_btn, 1)
+        root.addLayout(buy_sell)
 
-        # Řada 2: CLOSE varianty (menší, pod nimi)
-        close_lay = QHBoxLayout()
-        close_lay.setSpacing(4)
+        # ── CLOSE BUTTONS (compact row) ───────────────────────────────────
+        close_row = QHBoxLayout()
+        close_row.setSpacing(4)
+        close_row.setContentsMargins(0, 0, 0, 0)
 
-        self.close_btn = QPushButton("CLOSE pár")
-        self.close_btn.setStyleSheet(
-            "QPushButton { background-color: #334155; border: 1px solid #475569; color: white; "
-            "font-size: 10px; font-weight: bold; padding: 5px; border-radius: 4px; }"
-            "QPushButton:hover { background-color: #1e293b; }"
-            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
-        )
+        def close_btn_factory(text: str, bg: str, border: str) -> QPushButton:
+            b = QPushButton(text)
+            b.setFixedHeight(22)
+            b.setStyleSheet(
+                f"QPushButton {{ background:{bg}; border:1px solid {border}; color:white;"
+                f"  font-size:9px; font-weight:bold; border-radius:3px; }}"
+                f"QPushButton:hover {{ background:{border}; }}"
+                f"QPushButton:disabled {{ background:#1e293b; color:#334155; border-color:#1e293b; }}"
+            )
+            return b
+
+        self.close_btn = close_btn_factory("CLOSE PÁR", "#1e293b", "#475569")
+        self.close_profit_btn = close_btn_factory("💰 ZISK", "#0f766e", "#0d9488")
+        self.close_all_btn = close_btn_factory("⚠️ ALL", "#7f1d1d", "#ef4444")
+
         self.close_btn.clicked.connect(lambda: self._emit_action("close_symbol"))
-
-        self.close_profit_btn = QPushButton("💰 CLOSE ZISK")
-        self.close_profit_btn.setStyleSheet(
-            "QPushButton { background-color: #0f766e; border: 1px solid #0d9488; color: white; "
-            "font-size: 10px; font-weight: bold; padding: 5px; border-radius: 4px; }"
-            "QPushButton:hover { background-color: #115e59; }"
-            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
-        )
         self.close_profit_btn.clicked.connect(lambda: self._emit_action("close_profitable"))
-
-        self.close_all_btn = QPushButton("⚠ CLOSE ALL")
-        self.close_all_btn.setStyleSheet(
-            "QPushButton { background-color: #c2410c; border: 1px solid #ea580c; color: white; "
-            "font-size: 10px; font-weight: bold; padding: 5px; border-radius: 4px; }"
-            "QPushButton:hover { background-color: #9a3412; }"
-            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
-        )
         self.close_all_btn.clicked.connect(lambda: self._emit_action("close_all"))
 
-        close_lay.addWidget(self.close_btn, 1)
-        close_lay.addWidget(self.close_profit_btn, 1)
-        close_lay.addWidget(self.close_all_btn, 1)
-        root.addLayout(close_lay)
+        close_row.addWidget(self.close_btn, 2)
+        close_row.addWidget(self.close_profit_btn, 1)
+        close_row.addWidget(self.close_all_btn, 1)
+        root.addLayout(close_row)
 
-        # --- Tabulka pozic -----------------------------------------------
-        positions_box = QGroupBox("Všechny otevřené pozice")
-        pv = QVBoxLayout(positions_box)
-
+        # ── POSITIONS TABLE (Showing Sym, TF, @Price, P/L, ❌) ────────────
         self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(["Symbol", "Typ", "P/L", "Komentář", "Akce"])
+        self.table.setHorizontalHeaderLabels(["Sym", "TF", "@Price", "P/L", "❌"])
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setAlternatingRowColors(True)
-        header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.setMinimumHeight(120)
-        pv.addWidget(self.table)
+        self.table.setShowGrid(False)
+        h = self.table.horizontalHeader()
+        h.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents) # Sym
+        h.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents) # TF (Comment)
+        h.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)          # @Price (stretched)
+        h.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents) # P/L
+        h.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)            # Action close
+        h.resizeSection(4, 24)
+        self.table.verticalHeader().setDefaultSectionSize(20)
+        self.table.setMaximumHeight(130)
+        self.table.setStyleSheet(
+            "QTableWidget { font-size:10px; }"
+            "QHeaderView::section { font-size:9px; padding:2px; }"
+        )
+        root.addWidget(self.table)
 
         self.positions_summary = QLabel("Žádné otevřené pozice.")
-        self.positions_summary.setStyleSheet("color: gray; font-size: 11px;")
-        pv.addWidget(self.positions_summary)
+        self.positions_summary.setStyleSheet("color:#475569; font-size:9px;")
+        root.addWidget(self.positions_summary)
 
-        root.addWidget(positions_box)
+        # Separator
+        sep2 = QLabel()
+        sep2.setFixedHeight(1)
+        sep2.setStyleSheet("background:#1e293b;")
+        root.addWidget(sep2)
 
-        # --- Čekající stop objednávky (Stop Orders) -----------------------
-        stop_box = QGroupBox("Čekající stop objednávky")
-        stop_grid = QGridLayout(stop_box)
-        stop_grid.setHorizontalSpacing(15)
-        stop_grid.setVerticalSpacing(4)
-        
-        lbl_stop_side = QLabel("Typ Stopu")
-        lbl_stop_price = QLabel("Vstupní cena")
-        lbl_stop_sl = QLabel("SL (body)")
-        lbl_stop_tp = QLabel("TP (body)")
-        
-        for lbl in (lbl_stop_side, lbl_stop_price, lbl_stop_sl, lbl_stop_tp):
-            lbl.setStyleSheet("font-weight: bold; font-size: 11px;")
-            
+        # ── STOP ORDERS SECTION (Symmetric & Compact layout) ──────────────
+        stop_lbl = QLabel("STOP PŘÍKAZY")
+        stop_lbl.setStyleSheet("color:#38bdf8; font-size:9px; font-weight:bold; letter-spacing:1px;")
+        root.addWidget(stop_lbl)
+
+        # Row 1: Typ Stopu, Vstupní cena inputs
+        stop_grid = QGridLayout()
+        stop_grid.setSpacing(4)
+        stop_grid.setContentsMargins(0, 0, 0, 0)
+
+        stop_type_lay = QHBoxLayout()
+        stop_type_lay.setContentsMargins(0, 0, 0, 0)
+        stop_type_lay.setSpacing(3)
+
         self.buy_stop_btn = QPushButton("BUY STOP")
         self.buy_stop_btn.setCheckable(True)
         self.buy_stop_btn.setChecked(True)
+        self.buy_stop_btn.setFixedHeight(22)
         self.buy_stop_btn.setStyleSheet(
-            "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-weight: bold; }"
-            "QPushButton:checked { background-color: #22c55e; color: white; border-color: #16a34a; }"
-            "QPushButton:hover { background-color: #334155; }"
+            "QPushButton { background:#1e293b; color:#64748b; border:1px solid #334155; border-radius:3px; font-size:10px; font-weight:bold; padding:0 8px; }"
+            "QPushButton:checked { background:#15803d; color:white; border-color:#22c55e; }"
+            "QPushButton:hover { background:#334155; }"
         )
-        
+
         self.sell_stop_btn = QPushButton("SELL STOP")
         self.sell_stop_btn.setCheckable(True)
+        self.sell_stop_btn.setFixedHeight(22)
         self.sell_stop_btn.setStyleSheet(
-            "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-weight: bold; }"
-            "QPushButton:checked { background-color: #ef4444; color: white; border-color: #dc2626; }"
-            "QPushButton:hover { background-color: #334155; }"
+            "QPushButton { background:#1e293b; color:#64748b; border:1px solid #334155; border-radius:3px; font-size:10px; font-weight:bold; padding:0 8px; }"
+            "QPushButton:checked { background:#b91c1c; color:white; border-color:#ef4444; }"
+            "QPushButton:hover { background:#334155; }"
         )
-        
+
         self.stop_type_group = QButtonGroup(self)
         self.stop_type_group.addButton(self.buy_stop_btn)
         self.stop_type_group.addButton(self.sell_stop_btn)
         self.stop_type_group.buttonClicked.connect(self._update_stop_lbls)
+        stop_type_lay.addWidget(self.buy_stop_btn)
+        stop_type_lay.addWidget(self.sell_stop_btn)
 
-        type_lay = QHBoxLayout()
-        type_lay.setContentsMargins(0, 0, 0, 0)
-        type_lay.setSpacing(4)
-        type_lay.addWidget(self.buy_stop_btn)
-        type_lay.addWidget(self.sell_stop_btn)
+        stop_price_lay = QHBoxLayout()
+        stop_price_lay.setContentsMargins(0, 0, 0, 0)
+        stop_price_lay.setSpacing(3)
 
         self.stop_price_spin = QDoubleSpinBox()
         self.stop_price_spin.setRange(0.0, 1_000_000.0)
         self.stop_price_spin.setDecimals(5)
         self.stop_price_spin.setSingleStep(0.1)
-        self.stop_price_spin.setMaximumWidth(95)
+        self.stop_price_spin.setStyleSheet(spin_ss)
+        self.stop_price_spin.setFixedHeight(22)
         self.stop_price_spin.valueChanged.connect(self._update_stop_lbls)
-        
+
         self.update_price_btn = QPushButton("🔄")
         self.update_price_btn.setToolTip("Nastavit aktuální tržní cenu")
-        self.update_price_btn.setFixedWidth(28)
+        self.update_price_btn.setFixedSize(22, 22)
         self.update_price_btn.setStyleSheet(
-            "QPushButton { background-color: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 4px; padding: 2px; font-weight: bold; }"
-            "QPushButton:hover { background-color: #334155; }"
-            "QPushButton:disabled { background-color: #0f172a; }"
+            "QPushButton { background:#1e293b; color:#94a3b8; border:1px solid #334155; border-radius:3px; font-size:11px; }"
+            "QPushButton:hover { background:#334155; }"
         )
         self.update_price_btn.clicked.connect(self._on_update_stop_price)
-        
+        stop_price_lay.addWidget(self.stop_price_spin, 1)
+        stop_price_lay.addWidget(self.update_price_btn)
+
+        stop_grid.addWidget(make_lbl("Typ Stopu"), 0, 0)
+        stop_grid.addWidget(make_lbl("Vstupní cena"), 0, 1)
+        stop_grid.addLayout(stop_type_lay, 1, 0)
+        stop_grid.addLayout(stop_price_lay, 1, 1)
+
+        root.addLayout(stop_grid)
+
+        # Row 2: SL and TP inputs on a NEW row for Stop Orders
+        stop_sl_tp_row = QHBoxLayout()
+        stop_sl_tp_row.setSpacing(12)
+        stop_sl_tp_row.setContentsMargins(0, 0, 0, 0)
+
+        # Stop SL layout
+        stop_sl_lay = QHBoxLayout()
+        stop_sl_lay.setSpacing(4)
+        stop_sl_lay.setContentsMargins(0, 0, 0, 0)
         self.stop_sl_spin = QSpinBox()
         self.stop_sl_spin.setRange(0, 100000)
         self.stop_sl_spin.setSingleStep(10)
-        self.stop_sl_spin.setMaximumWidth(80)
+        self.stop_sl_spin.setStyleSheet(spin_ss)
+        self.stop_sl_spin.setFixedWidth(65)
+        self.stop_sl_spin.setFixedHeight(22)
         self.stop_sl_spin.valueChanged.connect(self._update_stop_lbls)
-        
+
+        self.stop_sl_usd_label = QLabel("Bez SL")
+        self.stop_sl_usd_label.setStyleSheet("color:#ef4444; font-size:12px; font-weight:bold;")
+        self.stop_sl_price_label = QLabel("")
+        self.stop_sl_price_label.setStyleSheet("color:#64748b; font-size:9px;")
+
+        stop_sl_lay.addWidget(make_lbl("SL (body):"))
+        stop_sl_lay.addWidget(self.stop_sl_spin)
+        stop_sl_lay.addWidget(self.stop_sl_usd_label)
+        stop_sl_lay.addWidget(self.stop_sl_price_label)
+
+        # Stop TP layout
+        stop_tp_lay = QHBoxLayout()
+        stop_tp_lay.setSpacing(4)
+        stop_tp_lay.setContentsMargins(0, 0, 0, 0)
         self.stop_tp_spin = QSpinBox()
         self.stop_tp_spin.setRange(0, 100000)
         self.stop_tp_spin.setSingleStep(10)
-        self.stop_tp_spin.setMaximumWidth(80)
+        self.stop_tp_spin.setStyleSheet(spin_ss)
+        self.stop_tp_spin.setFixedWidth(65)
+        self.stop_tp_spin.setFixedHeight(22)
         self.stop_tp_spin.valueChanged.connect(self._update_stop_lbls)
-        
-        # Stop dynamic labels for SL/TP values
-        self.stop_sl_label = QLabel("Bez SL")
-        self.stop_tp_label = QLabel("Bez TP")
-        self.stop_sl_label.setStyleSheet("color: #94a3b8; font-size: 10px;")
-        self.stop_tp_label.setStyleSheet("color: #94a3b8; font-size: 10px;")
-        
-        # Timeframe for Stop orders
-        lbl_stop_tf = QLabel("Komentář (Timeframe)")
-        lbl_stop_tf.setStyleSheet("font-weight: bold; font-size: 11px;")
-        
+
+        self.stop_tp_usd_label = QLabel("Bez TP")
+        self.stop_tp_usd_label.setStyleSheet("color:#22c55e; font-size:12px; font-weight:bold;")
+        self.stop_tp_price_label = QLabel("")
+        self.stop_tp_price_label.setStyleSheet("color:#64748b; font-size:9px;")
+
+        stop_tp_lay.addWidget(make_lbl("TP (body):"))
+        stop_tp_lay.addWidget(self.stop_tp_spin)
+        stop_tp_lay.addWidget(self.stop_tp_usd_label)
+        stop_tp_lay.addWidget(self.stop_tp_price_label)
+
+        stop_sl_tp_row.addLayout(stop_sl_lay)
+        stop_sl_tp_row.addLayout(stop_tp_lay)
+        stop_sl_tp_row.addStretch()
+
+        root.addLayout(stop_sl_tp_row)
+
+        # Row 3: Stop Timeframe Selector & Place Button
+        stop_action_row = QHBoxLayout()
+        stop_action_row.setSpacing(4)
+        stop_action_row.setContentsMargins(0, 0, 0, 0)
+
+        # Timeframe comment buttons for Stop
         stop_tf_container = QWidget()
         stop_tf_layout = QHBoxLayout(stop_tf_container)
         stop_tf_layout.setContentsMargins(0, 0, 0, 0)
-        stop_tf_layout.setSpacing(4)
-        
+        stop_tf_layout.setSpacing(3)
         self.stop_tf_group = QButtonGroup(self)
         self.stop_tf_buttons = {}
         for tf in ["M1", "M5", "M15", "M30", "H1"]:
             btn = QPushButton(tf)
             btn.setCheckable(True)
-            btn.setStyleSheet(
-                "QPushButton { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 2px 5px; font-size: 10px; font-weight: bold; min-width: 30px; }"
-                "QPushButton:checked { background-color: #3b82f6; color: white; border-color: #2563eb; }"
-                "QPushButton:hover { background-color: #334155; color: #f1f5f9; }"
-            )
+            btn.setStyleSheet(tf_ss)
+            btn.setFixedHeight(20)
             self.stop_tf_group.addButton(btn)
             stop_tf_layout.addWidget(btn)
             self.stop_tf_buttons[tf] = btn
-            
         self.stop_tf_buttons["M15"].setChecked(True)
-        
-        # Send button
-        self.place_stop_btn = QPushButton("Odeslat STOP")
+
+        self.place_stop_btn = QPushButton("▶  ODESLAT STOP")
+        self.place_stop_btn.setFixedHeight(24)
         self.place_stop_btn.setStyleSheet(
-            "QPushButton { background-color: #4f46e5; border: 1px solid #6366f1; color: white; font-weight: bold; padding: 8px 16px; border-radius: 5px; }"
-            "QPushButton:hover { background-color: #4338ca; }"
-            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
+            "QPushButton { background:#4338ca; border:1px solid #6366f1; color:white;"
+            "  font-size:10px; font-weight:bold; border-radius:4px; padding:0 12px; }"
+            "QPushButton:hover { background:#3730a3; }"
+            "QPushButton:disabled { background:#1e293b; color:#334155; border-color:#1e293b; }"
         )
         self.place_stop_btn.clicked.connect(self._on_place_stop)
-        
-        # Grid layout assembly
-        stop_grid.addWidget(lbl_stop_side, 0, 0)
-        stop_grid.addLayout(type_lay, 1, 0)
-        
-        stop_grid.addWidget(lbl_stop_price, 0, 1)
-        
-        # Horizontal layout for price input and update button
-        price_lay = QHBoxLayout()
-        price_lay.setContentsMargins(0, 0, 0, 0)
-        price_lay.setSpacing(4)
-        price_lay.addWidget(self.stop_price_spin, 1)
-        price_lay.addWidget(self.update_price_btn)
-        stop_grid.addLayout(price_lay, 1, 1)
-        
-        stop_grid.addWidget(lbl_stop_sl, 0, 2)
-        stop_grid.addWidget(self.stop_sl_spin, 1, 2)
-        stop_grid.addWidget(self.stop_sl_label, 2, 2)
-        
-        stop_grid.addWidget(lbl_stop_tp, 0, 3)
-        stop_grid.addWidget(self.stop_tp_spin, 1, 3)
-        stop_grid.addWidget(self.stop_tp_label, 2, 3)
-        
-        # New Timeframe Row
-        stop_grid.addWidget(lbl_stop_tf, 3, 0, 1, 3)
-        stop_grid.addWidget(stop_tf_container, 4, 0, 1, 4)
-        
-        # Send Button in Column 4, spanning rows 3-4 next to TF buttons
-        stop_grid.addWidget(self.place_stop_btn, 3, 4, 2, 1)
-        
-        root.addWidget(stop_box)
 
+        stop_action_row.addWidget(make_lbl("TF (komentář):"))
+        stop_action_row.addWidget(stop_tf_container)
+        stop_action_row.addStretch()
+        stop_action_row.addWidget(self.place_stop_btn)
+
+        root.addLayout(stop_action_row)
         root.addStretch(1)
 
     # -------------------------------------------------------- params I/O
@@ -462,6 +519,28 @@ class SymbolPanel(QWidget):
         params = {"symbol": self._symbol}
         if action in ("buy", "sell"):
             params.update(self._current_params())
+            
+            # Převod SL/TP z bodů na absolutní cenové hladiny před odesláním do MT5
+            tick = self._last_tick
+            if not tick:
+                import mt5_service
+                t = mt5_service.get_tick(self._symbol)
+                if t:
+                    tick = {"ask": t.ask, "bid": t.bid}
+                    
+            if tick:
+                is_buy = action == "buy"
+                entry_price = tick["ask"] if is_buy else tick["bid"]
+                point = getattr(self, "_point", 0.00001)
+                sl_pts = params["sl"]
+                tp_pts = params["tp"]
+                
+                params["sl"] = (entry_price - sl_pts * point) if (sl_pts > 0 and is_buy) else ((entry_price + sl_pts * point) if sl_pts > 0 else 0.0)
+                params["tp"] = (entry_price + tp_pts * point) if (tp_pts > 0 and is_buy) else ((entry_price - tp_pts * point) if tp_pts > 0 else 0.0)
+            else:
+                params["sl"] = 0.0
+                params["tp"] = 0.0
+
             checked_btn = self.tf_group.checkedButton()
             if checked_btn:
                 params["comment"] = checked_btn.text()
@@ -494,26 +573,31 @@ class SymbolPanel(QWidget):
         
         is_buy = self.buy_stop_btn.isChecked()
         
-        def get_money_str(pts: int) -> str:
-            if pts <= 0 or not tick_value or not tick_size or tick_size == 0:
-                return ""
-            val = (pts * point / tick_size) * tick_value * lot_size
-            return f" (~ {val:.2f} USD)"
-            
-        sl_money = get_money_str(sl_pts)
-        tp_money = get_money_str(tp_pts)
-        
         if sl_pts > 0:
+            if tick_value and tick_size and tick_size > 0:
+                sl_usd = (sl_pts * point / tick_size) * tick_value * lot_size
+                self.stop_sl_usd_label.setText(f"Risk: -{sl_usd:.2f} USD")
+            else:
+                self.stop_sl_usd_label.setText("Risk: -- USD")
+            
             sl_price = (entry - sl_pts * point) if is_buy else (entry + sl_pts * point)
-            self.stop_sl_label.setText(f"Cena: {sl_price:.{digits}f}{sl_money}")
+            self.stop_sl_price_label.setText(f"Cena: {sl_price:.{digits}f}")
         else:
-            self.stop_sl_label.setText("Bez SL")
+            self.stop_sl_usd_label.setText("Bez SL")
+            self.stop_sl_price_label.setText("")
             
         if tp_pts > 0:
+            if tick_value and tick_size and tick_size > 0:
+                tp_usd = (tp_pts * point / tick_size) * tick_value * lot_size
+                self.stop_tp_usd_label.setText(f"Zisk: +{tp_usd:.2f} USD")
+            else:
+                self.stop_tp_usd_label.setText("Zisk: -- USD")
+                
             tp_price = (entry + tp_pts * point) if is_buy else (entry - tp_pts * point)
-            self.stop_tp_label.setText(f"Cena: {tp_price:.{digits}f}{tp_money}")
+            self.stop_tp_price_label.setText(f"Cena: {tp_price:.{digits}f}")
         else:
-            self.stop_tp_label.setText("Bez TP")
+            self.stop_tp_usd_label.setText("Bez TP")
+            self.stop_tp_price_label.setText("")
 
     def _on_place_stop(self) -> None:
         is_buy = self.buy_stop_btn.isChecked()
@@ -549,8 +633,6 @@ class SymbolPanel(QWidget):
         sl_pts = self.sl_spin.value()
         tp_pts = self.tp_spin.value()
         
-        # BUY orders open at Ask. SL below Ask, TP above Ask.
-        # SELL orders open at Bid. SL above Bid, TP below Bid.
         ask = tick["ask"]
         bid = tick["bid"]
         point = getattr(self, "_point", 0.00001)
@@ -559,45 +641,44 @@ class SymbolPanel(QWidget):
         tick_size = getattr(self, "_tick_size", None)
         lot_size = self.lot_spin.value()
 
-        def get_money_str(pts: int) -> str:
-            if pts <= 0 or not tick_value or not tick_size or tick_size == 0:
-                return ""
-            val = (pts * point / tick_size) * tick_value * lot_size
-            return f" (~ {val:.2f} USD)"
-        
-        sl_money = get_money_str(sl_pts)
-        tp_money = get_money_str(tp_pts)
-        
         if sl_pts > 0:
+            if tick_value and tick_size and tick_size > 0:
+                sl_usd = (sl_pts * point / tick_size) * tick_value * lot_size
+                self.sl_usd_label.setText(f"Risk: -{sl_usd:.2f} USD")
+            else:
+                self.sl_usd_label.setText("Risk: -- USD")
             buy_sl = ask - sl_pts * point
             sell_sl = bid + sl_pts * point
-            self.buy_sl_label.setText(f"BUY SL: {buy_sl:.{digits}f}{sl_money}")
-            self.sell_sl_label.setText(f"SELL SL: {sell_sl:.{digits}f}{sl_money}")
+            self.sl_price_label.setText(f"B: {buy_sl:.{digits}f} | S: {sell_sl:.{digits}f}")
         else:
-            self.buy_sl_label.setText("BUY SL: Bez SL")
-            self.sell_sl_label.setText("SELL SL: Bez SL")
+            self.sl_usd_label.setText("Bez SL")
+            self.sl_price_label.setText("")
             
         if tp_pts > 0:
+            if tick_value and tick_size and tick_size > 0:
+                tp_usd = (tp_pts * point / tick_size) * tick_value * lot_size
+                self.tp_usd_label.setText(f"Zisk: +{tp_usd:.2f} USD")
+            else:
+                self.tp_usd_label.setText("Zisk: -- USD")
             buy_tp = ask + tp_pts * point
             sell_tp = bid - tp_pts * point
-            self.buy_tp_label.setText(f"BUY TP: {buy_tp:.{digits}f}{tp_money}")
-            self.sell_tp_label.setText(f"SELL TP: {sell_tp:.{digits}f}{tp_money}")
+            self.tp_price_label.setText(f"B: {buy_tp:.{digits}f} | S: {sell_tp:.{digits}f}")
         else:
-            self.buy_tp_label.setText("BUY TP: Bez TP")
-            self.sell_tp_label.setText("SELL TP: Bez TP")
+            self.tp_usd_label.setText("Bez TP")
+            self.tp_price_label.setText("")
 
     def update_tick(self, tick: dict | None) -> None:
         self._last_tick = tick
         if tick is None:
-            self.price_label.setText("Bid: —  |  Ask: —")
-            self.buy_sl_label.setText("BUY SL: —")
-            self.sell_sl_label.setText("SELL SL: —")
-            self.buy_tp_label.setText("BUY TP: —")
-            self.sell_tp_label.setText("SELL TP: —")
+            self.price_label.setText("— / —")
+            self.sl_usd_label.setText("Risk: —")
+            self.sl_price_label.setText("")
+            self.tp_usd_label.setText("Zisk: —")
+            self.tp_price_label.setText("")
             return
         
         self.price_label.setText(
-            f"Bid: {tick['bid']:.5f}  |  Ask: {tick['ask']:.5f}"
+            f"Bid: {tick['bid']:.{self._digits}f}  |  Ask: {tick['ask']:.{self._digits}f}"
         )
         
         # Fetch point and digits if not done yet
@@ -623,7 +704,12 @@ class SymbolPanel(QWidget):
     def update_positions(self, positions: list[dict]) -> None:
         self.table.setRowCount(0)
         total_pl = 0.0
-        for p in positions:
+        
+        # Omezíme pouze na páry z Quantum Advanced Multi-TF Matrix Screen tabulky
+        allowed_symbols = {"XAUUSD", "EURUSD", "USDJPY", "EURJPY", "USDCAD", "GBPUSD", "GBPCHF", "AUDUSD"}
+        filtered_positions = [p for p in positions if p["symbol"] in allowed_symbols]
+        
+        for p in filtered_positions:
             row = self.table.rowCount()
             self.table.insertRow(row)
             
@@ -632,25 +718,27 @@ class SymbolPanel(QWidget):
             symbol_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table.setItem(row, 0, symbol_item)
             
-            # Type
-            type_item = QTableWidgetItem(p["type"])
-            type_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            type_item.setForeground(
-                Qt.GlobalColor.green if p["type"] == "BUY" else Qt.GlobalColor.red
+            # Timeframe (comment)
+            comment_item = QTableWidgetItem(p.get("comment", ""))
+            comment_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.table.setItem(row, 1, comment_item)
+            
+            # @Price (open execution price colored by type)
+            is_buy = p["type"] == "BUY"
+            price_str = f"@ {p['price_open']:.2f}" if ("XAU" in p["symbol"] or "JPY" in p["symbol"]) else f"@ {p['price_open']:.5f}"
+            price_item = QTableWidgetItem(price_str)
+            price_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            price_item.setForeground(
+                Qt.GlobalColor.green if is_buy else Qt.GlobalColor.red
             )
-            self.table.setItem(row, 1, type_item)
+            self.table.setItem(row, 2, price_item)
             
             # Profit / Loss
             pl_item = QTableWidgetItem(f"{p['profit']:.2f}")
             pl_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             pl_color = Qt.GlobalColor.green if p["profit"] >= 0 else Qt.GlobalColor.red
             pl_item.setForeground(pl_color)
-            self.table.setItem(row, 2, pl_item)
-
-            # Comment (Timeframe)
-            comment_item = QTableWidgetItem(p.get("comment", ""))
-            comment_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.table.setItem(row, 3, comment_item)
+            self.table.setItem(row, 3, pl_item)
             
             # Action: Close (❌) button
             close_btn = QPushButton("❌")
@@ -665,7 +753,7 @@ class SymbolPanel(QWidget):
             
             total_pl += p["profit"]
 
-        count = len(positions)
+        count = len(filtered_positions)
         if count == 0:
             self.positions_summary.setText("Žádné otevřené pozice.")
         else:

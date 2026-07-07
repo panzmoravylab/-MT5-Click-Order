@@ -151,8 +151,8 @@ QTabBar::tab:hover {
 
 /* Table styling */
 QTableWidget {
-    background-color: #1e293b;
-    alternate-background-color: #0f172a;
+    background-color: #141c2f;
+    alternate-background-color: #1a2540;
     border: 1px solid #334155;
     gridline-color: #334155;
     border-radius: 6px;
@@ -323,7 +323,7 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
 
         self.status_dot = QLabel("●")
-        self.status_dot.setStyleSheet("color: gray; font-size: 18px;")
+        self.status_dot.setStyleSheet("color: #475569; font-size: 11px;")
         top.addWidget(self.status_dot)
 
         self.status_label = QLabel("Nepřipojeno")
@@ -401,11 +401,11 @@ class MainWindow(QMainWindow):
     # ---------------------------------------------------- live callbacks
     def _on_account(self, acc: dict | None) -> None:
         if acc is None:
-            self.status_dot.setStyleSheet("color: gray; font-size: 18px;")
+            self.status_dot.setStyleSheet("color: #475569; font-size: 11px;")
             self.status_label.setText("Nepřipojeno")
-            self.status_label.setStyleSheet("font-weight: bold; color: gray;")
+            self.status_label.setStyleSheet("font-weight: bold; color: #64748b;")
             return
-        self.status_dot.setStyleSheet("color: #16a34a; font-size: 18px;")
+        self.status_dot.setStyleSheet("color: #22c55e; font-size: 11px;")
         self.status_label.setText(
             f"Připojeno  •  {acc['login']}  •  Bal: {acc['balance']:.2f} {acc['currency']}"
         )

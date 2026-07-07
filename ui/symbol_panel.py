@@ -54,8 +54,8 @@ class SymbolPanel(QWidget):
     # --------------------------------------------------------------- build
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(10, 10, 10, 10)
-        root.setSpacing(10)
+        root.setContentsMargins(5, 5, 5, 5)
+        root.setSpacing(6)
 
         # --- Hlavička: symbol + live cena ---------------------------------
         header = QHBoxLayout()
@@ -193,46 +193,46 @@ class SymbolPanel(QWidget):
 
         self.buy_btn = QPushButton("▲  BUY")
         self.buy_btn.setStyleSheet(
-            "QPushButton { background-color: #16a34a; color: white; "
-            "font-size: 15px; font-weight: bold; padding: 12px; border-radius: 4px; }"
-            "QPushButton:hover { background-color: #15803d; }"
-            "QPushButton:disabled { background-color: #9ca3af; }"
+            "QPushButton { background-color: #22c55e; color: white; "
+            "font-size: 13px; font-weight: bold; padding: 8px 16px; border-radius: 4px; border: none; }"
+            "QPushButton:hover { background-color: #16a34a; }"
+            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
         )
         self.buy_btn.clicked.connect(lambda: self._emit_action("buy"))
 
         self.sell_btn = QPushButton("▼  SELL")
         self.sell_btn.setStyleSheet(
-            "QPushButton { background-color: #dc2626; color: white; "
-            "font-size: 15px; font-weight: bold; padding: 12px; border-radius: 4px; }"
-            "QPushButton:hover { background-color: #b91c1c; }"
-            "QPushButton:disabled { background-color: #9ca3af; }"
+            "QPushButton { background-color: #ef4444; color: white; "
+            "font-size: 13px; font-weight: bold; padding: 8px 16px; border-radius: 4px; border: none; }"
+            "QPushButton:hover { background-color: #dc2626; }"
+            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
         )
         self.sell_btn.clicked.connect(lambda: self._emit_action("sell"))
 
         self.close_btn = QPushButton("CLOSE pár")
         self.close_btn.setStyleSheet(
-            "QPushButton { background-color: #4b5563; color: white; "
-            "font-size: 13px; font-weight: bold; padding: 12px; border-radius: 4px; }"
-            "QPushButton:hover { background-color: #374151; }"
-            "QPushButton:disabled { background-color: #9ca3af; }"
+            "QPushButton { background-color: #475569; color: white; "
+            "font-size: 11px; font-weight: bold; padding: 8px; border-radius: 4px; border: none; }"
+            "QPushButton:hover { background-color: #334155; }"
+            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
         )
         self.close_btn.clicked.connect(lambda: self._emit_action("close_symbol"))
 
-        self.close_profit_btn = QPushButton("💰 CLOSE V ZISKU")
+        self.close_profit_btn = QPushButton("💰 CLOSE ZISK")
         self.close_profit_btn.setStyleSheet(
-            "QPushButton { background-color: #047857; color: white; "
-            "font-size: 13px; font-weight: bold; padding: 12px; border-radius: 4px; }"
-            "QPushButton:hover { background-color: #065f46; }"
-            "QPushButton:disabled { background-color: #9ca3af; }"
+            "QPushButton { background-color: #0d9488; color: white; "
+            "font-size: 11px; font-weight: bold; padding: 8px; border-radius: 4px; border: none; }"
+            "QPushButton:hover { background-color: #0f766e; }"
+            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
         )
         self.close_profit_btn.clicked.connect(lambda: self._emit_action("close_profitable"))
 
-        self.close_all_btn = QPushButton("⚠  CLOSE ALL")
+        self.close_all_btn = QPushButton("⚠ CLOSE ALL")
         self.close_all_btn.setStyleSheet(
-            "QPushButton { background-color: #b45309; color: white; "
-            "font-size: 13px; font-weight: bold; padding: 12px; border-radius: 4px; }"
-            "QPushButton:hover { background-color: #92400e; }"
-            "QPushButton:disabled { background-color: #9ca3af; }"
+            "QPushButton { background-color: #ea580c; color: white; "
+            "font-size: 11px; font-weight: bold; padding: 8px; border-radius: 4px; border: none; }"
+            "QPushButton:hover { background-color: #c2410c; }"
+            "QPushButton:disabled { background-color: #1e293b; color: #475569; }"
         )
         self.close_all_btn.clicked.connect(lambda: self._emit_action("close_all"))
 

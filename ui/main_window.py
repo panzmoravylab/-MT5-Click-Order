@@ -39,6 +39,128 @@ from ui.settings_dialog import SettingsDialog
 from ui.workers import ActionWorker, ConnectWorker, PollWorker
 
 
+TRADING_QSS = """
+QMainWindow {
+    background-color: #0b0f17;
+}
+
+QWidget {
+    background-color: #0b0f17;
+    color: #cbd5e1;
+    font-family: "Segoe UI", -apple-system, Roboto, sans-serif;
+    font-size: 11px;
+}
+
+QGroupBox {
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    margin-top: 10px;
+    font-weight: bold;
+    color: #38bdf8;
+    background-color: #0f172a;
+    padding: 6px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 8px;
+    padding: 0 3px;
+}
+
+QSpinBox, QDoubleSpinBox, QLineEdit, QComboBox {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 3px 6px;
+    color: #f8fafc;
+    min-height: 18px;
+}
+
+QSpinBox:focus, QDoubleSpinBox:focus, QLineEdit:focus, QComboBox:focus {
+    border: 1px solid #38bdf8;
+    background-color: #1e293b;
+}
+
+QPushButton {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    color: #f1f5f9;
+    padding: 4px 8px;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #334155;
+}
+
+QPushButton:pressed {
+    background-color: #475569;
+}
+
+QTabWidget::pane {
+    border: 1px solid #1e293b;
+    background-color: #0b0f17;
+    border-radius: 6px;
+}
+
+QTabBar::tab {
+    background-color: #0f172a;
+    border: 1px solid #1e293b;
+    border-bottom: none;
+    padding: 6px 12px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    color: #94a3b8;
+    font-weight: bold;
+}
+
+QTabBar::tab:selected {
+    background-color: #0b0f17;
+    color: #38bdf8;
+    border-bottom: 2px solid #38bdf8;
+}
+
+QTabBar::tab:hover {
+    background-color: #1e293b;
+    color: #f1f5f9;
+}
+
+QTableWidget {
+    background-color: #0f172a;
+    border: 1px solid #1e293b;
+    gridline-color: #1e293b;
+    border-radius: 6px;
+}
+
+QTableWidget::item {
+    border-bottom: 1px solid #1e293b;
+    padding: 2px;
+}
+
+QTableWidget::item:selected {
+    background-color: #334155;
+    color: #38bdf8;
+}
+
+QHeaderView::section {
+    background-color: #1e293b;
+    color: #94a3b8;
+    font-weight: bold;
+    padding: 4px;
+    border: none;
+    border-bottom: 1px solid #334155;
+}
+
+QStatusBar {
+    background-color: #0f172a;
+    color: #94a3b8;
+    border-top: 1px solid #1e293b;
+}
+"""
+
+
 class AddSymbolDialog(QDialog):
     """Dialog pro přidání nového symbolu s výchozími parametry."""
 
@@ -108,7 +230,8 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Trading Panel — MetaTrader 5")
-        self.resize(520, 640)
+        self.resize(520, 660)
+        self.setStyleSheet(TRADING_QSS)
 
         self._config = config_manager.load_config()
 

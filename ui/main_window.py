@@ -348,7 +348,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Trading Panel — MetaTrader 5")
-        self.resize(380, 680)
+        self.resize(400, 760)
         self.setStyleSheet(TRADING_QSS)
 
         self._config = config_manager.load_config()
@@ -461,12 +461,19 @@ class MainWindow(QMainWindow):
             self.status_dot.setStyleSheet("color: #475569; font-size: 11px;")
             self.status_label.setText("Nepřipojeno")
             self.status_label.setStyleSheet("font-weight: bold; color: #64748b;")
-            return
-        self.status_dot.setStyleSheet("color: #22c55e; font-size: 11px;")
-        self.status_label.setText(
-            f"Připojeno  •  {acc['login']}  •  Bal: {acc['balance']:.2f} {acc['currency']}"
-        )
-        self.status_label.setStyleSheet("font-weight: bold; color: #166534;")
+        else:
+            self.status_dot.setStyleSheet("color: #22c55e; font-size: 11px;")
+            equity = acc.get("equity", acc["balance"])
+            free = acc.get("margin_free", equity)
+            self.status_label.setText(
+                f"Připojeno  •  {acc['login']}  •  "
+                f"Bal: {acc['balance']:.2f}  •  Eq: {equity:.2f}  •  Free: {free:.2f} {acc['currency']}"
+            )
+            self.status_label.setStyleSheet("font-weight: bold; color: #166534;")
+
+        # Rozeslat account info do všech panelů (info řádek v hlavičce).
+        for panel in self._panels.values():
+            panel.update_account(acc)
 
     def _on_tick(self, symbol: str, tick: dict | None) -> None:
         if not symbol:
@@ -611,7 +618,11 @@ class MainWindow(QMainWindow):
 
         added = config_manager.add_symbol(
             self._config, symbol,
-            {"position_count": vals["position_count"], "lot_size": vals["lot_size"]},
+            {
+                "position_count": vals["position_count"],
+                "lot_size": vals["lot_size"],
+                "stop_lot_size": vals["lot_size"],  # výchozí STOP lot = tržní lot
+            },
         )
         if not added:
             QMessageBox.information(self, "Existuje", f"Symbol {symbol} už existuje.")

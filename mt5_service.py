@@ -128,6 +128,8 @@ def get_account_info() -> dict[str, Any] | None:
         "equity": info.equity,
         "currency": info.currency,
         "name": info.name,
+        "margin_free": info.margin_free,
+        "profit": info.profit,
     }
 
 
@@ -438,7 +440,12 @@ def close_profitable() -> tuple[bool, str]:
 
 
 def get_symbol_info(symbol: str) -> dict[str, Any] | None:
-    """Vrátí informace o symbolu (point, digits, tick_value, tick_size) nebo None."""
+    """Vrátí informace o symbolu (point, digits, tick_value, tick_size) nebo None.
+
+    Vrací navíc:
+    - ``stops_level`` — minimální vzdálenost SL/TP od ceny v bodech (řeší 10016).
+    - ``volume_min`` / ``volume_max`` / ``volume_step`` — pro validaci lotu v UI.
+    """
     info = mt5.symbol_info(symbol)
     if info is None:
         return None
@@ -447,6 +454,10 @@ def get_symbol_info(symbol: str) -> dict[str, Any] | None:
         "digits": info.digits,
         "tick_value": info.trade_tick_value,
         "tick_size": info.trade_tick_size,
+        "stops_level": info.trade_stops_level,
+        "volume_min": info.volume_min,
+        "volume_max": info.volume_max,
+        "volume_step": info.volume_step,
     }
 
 

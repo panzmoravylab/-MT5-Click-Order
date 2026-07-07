@@ -9,7 +9,7 @@ Struktura:
     "terminal_path": str
   },
   "symbols": {
-    "XAUUSD": {"position_count": int, "lot_size": float,
+    "XAUUSD": {"position_count": int, "lot_size": float, "stop_lot_size": float,
                "sl": float, "tp": float, "deviation": int},
     ...
   }
@@ -28,12 +28,14 @@ CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.j
 _DEFAULT_TERMINAL = r"C:\Program Files\MetaTrader 5\terminal64.exe"
 
 # Výchozí symboly s rozumnými hodnotami (SL/TP jsou v bodech/offsets).
+# ``stop_lot_size`` = velikost lotu pro STOP příkazy (Buy Stop / Sell Stop),
+# umožňuje nastavit riziko nezávisle na tržních obchodech.
 _DEFAULT_SYMBOLS: dict[str, dict[str, Any]] = {
-    "XAUUSD": {"position_count": 1, "lot_size": 0.01, "sl": 200.0, "tp": 400.0, "deviation": 20},
-    "EURUSD": {"position_count": 1, "lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
-    "USDJPY": {"position_count": 1, "lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
-    "AUDUSD": {"position_count": 1, "lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
-    "USDCAD": {"position_count": 1, "lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
+    "XAUUSD": {"position_count": 1, "lot_size": 0.01, "stop_lot_size": 0.01, "sl": 200.0, "tp": 400.0, "deviation": 20},
+    "EURUSD": {"position_count": 1, "lot_size": 0.10, "stop_lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
+    "USDJPY": {"position_count": 1, "lot_size": 0.10, "stop_lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
+    "AUDUSD": {"position_count": 1, "lot_size": 0.10, "stop_lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
+    "USDCAD": {"position_count": 1, "lot_size": 0.10, "stop_lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
 }
 
 
@@ -96,6 +98,12 @@ def load_config() -> dict[str, Any]:
         for sym, params in config["symbols"].items():
             if not isinstance(params, dict):
                 continue
+            # Zpětná kompatibilita: starší configy nemají stop_lot_size —
+            # výchozí hodnota se odvodí z lot_size (stejné riziko jako dříve).
+            # POZOR: musí být PŘED generickým setdefault cyklem, jinak by
+            # setdefault doplnil výchozí 0.01 z XAUUSD a dědičnost by neproběhla.
+            if "stop_lot_size" not in params:
+                params["stop_lot_size"] = float(params.get("lot_size", defaults["symbols"]["XAUUSD"]["lot_size"]))
             for key, val in defaults["symbols"]["XAUUSD"].items():
                 params.setdefault(key, val)
     return config
@@ -129,6 +137,7 @@ def get_symbol_params(config: dict[str, Any], symbol: str) -> dict[str, Any]:
     return {
         "position_count": int(params.get("position_count", defaults["position_count"])),
         "lot_size": float(params.get("lot_size", defaults["lot_size"])),
+        "stop_lot_size": float(params.get("stop_lot_size", params.get("lot_size", defaults["lot_size"]))),
         "sl": float(params.get("sl", defaults["sl"])),
         "tp": float(params.get("tp", defaults["tp"])),
         "deviation": int(params.get("deviation", defaults["deviation"])),
@@ -139,9 +148,14 @@ def set_symbol_params(config: dict[str, Any], symbol: str, params: dict[str, Any
     """Aktualizuje parametry symbolu v config struktuře (je třeba následně uložit)."""
     if "symbols" not in config:
         config["symbols"] = {}
+    # Zachováme existující stop_lot_size, pokud nové params nepřichází s novou hodnotou.
+    existing = config["symbols"].get(symbol, {})
     config["symbols"][symbol] = {
         "position_count": int(params.get("position_count", 1)),
         "lot_size": float(params.get("lot_size", 0.01)),
+        "stop_lot_size": float(params.get(
+            "stop_lot_size", existing.get("stop_lot_size", params.get("lot_size", 0.01))
+        )),
         "sl": float(params.get("sl", 0.0)),
         "tp": float(params.get("tp", 0.0)),
         "deviation": int(params.get("deviation", 20)),
@@ -160,6 +174,9 @@ def add_symbol(config: dict[str, Any], symbol: str, params: dict[str, Any] | Non
     defaults = _DEFAULT_SYMBOLS["XAUUSD"].copy()
     if params:
         defaults.update(params)
+    # Pokud explicitně nebyl předán stop_lot_size, odvodíme z lot_size.
+    if "stop_lot_size" not in defaults:
+        defaults["stop_lot_size"] = float(defaults.get("lot_size", 0.01))
     config["symbols"][symbol] = defaults
     return True
 

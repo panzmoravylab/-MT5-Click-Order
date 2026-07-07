@@ -170,6 +170,7 @@ def _send_market_order(
     sl: float,
     tp: float,
     deviation: int,
+    comment: str = "trading_panel",
 ) -> tuple[bool, str]:
     """Odešle jeden market deal. order_type = ORDER_TYPE_BUY/SELL."""
     if not _ensure_symbol(symbol):
@@ -196,7 +197,7 @@ def _send_market_order(
         "tp": float(tp) if tp else 0.0,
         "deviation": int(deviation),
         "magic": MAGIC_NUMBER,
-        "comment": "trading_panel",
+        "comment": comment,
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": filling,
     }
@@ -225,6 +226,7 @@ def open_positions(
     sl: float,
     tp: float,
     deviation: int,
+    comment: str = "trading_panel",
 ) -> tuple[bool, str]:
     """Otevře N pozic (stejných parametrů) pro daný symbol.
 
@@ -246,7 +248,7 @@ def open_positions(
     last_msg = ""
     for i in range(int(position_count)):
         success, msg = _send_market_order(
-            symbol, order_type, lot_size, sl, tp, deviation
+            symbol, order_type, lot_size, sl, tp, deviation, comment
         )
         if success:
             ok += 1
@@ -398,3 +400,103 @@ def symbol_exists(symbol: str) -> bool:
     """Ověří, že symbol je v MT5 dostupný (lze vybrat)."""
     info = mt5.symbol_info(symbol)
     return info is not None
+
+
+def close_position(ticket: int) -> tuple[bool, str]:
+    """Zavře jednu pozici podle jejího ticketu."""
+    positions = mt5.positions_get(ticket=ticket)
+    if positions is None or len(positions) == 0:
+        return False, f"Pozice s ticketem {ticket} nebyla nalezena."
+    return _close_one_position(positions[0])
+
+
+def close_profitable() -> tuple[bool, str]:
+    """Zavře všechny otevřené pozice na účtu, které jsou v jakémkoliv zisku (> 0)."""
+    positions = mt5.positions_get()
+    if positions is None or len(positions) == 0:
+        return True, "Žádné otevřené pozice na účtu."
+
+    ok = 0
+    fail = 0
+    last_msg = ""
+    for pos in positions:
+        if pos.profit > 0:
+            success, msg = _close_one_position(pos)
+            if success:
+                ok += 1
+            else:
+                fail += 1
+                last_msg = msg
+
+    if fail == 0:
+        return True, f"Zavřeno {ok} ziskových pozic na účtu."
+    if ok == 0:
+        return False, f"Nepodařilo se zavřít žádnou ziskovou pozici. {last_msg}"
+    return False, f"Částečný úspěch: {ok} ziskových zavřeno, {fail} selhalo. {last_msg}"
+
+
+def get_symbol_info(symbol: str) -> dict[str, Any] | None:
+    """Vrátí informace o symbolu (point, digits, tick_value, tick_size) nebo None."""
+    info = mt5.symbol_info(symbol)
+    if info is None:
+        return None
+    return {
+        "point": info.point,
+        "digits": info.digits,
+        "tick_value": info.trade_tick_value,
+        "tick_size": info.trade_tick_size,
+    }
+
+
+def open_pending_stop(
+    symbol: str,
+    side: str,                # "BUY_STOP" nebo "SELL_STOP"
+    volume: float,
+    price: float,
+    sl: float,
+    tp: float,
+    deviation: int,
+    comment: str = "trading_panel",
+) -> tuple[bool, str]:
+    """Odešle jeden čekající stop příkaz (Buy Stop / Sell Stop)."""
+    if not _ensure_symbol(symbol):
+        return False, f"Nelze vybrat symbol {symbol} v Market Watch."
+
+    side = side.upper()
+    if side == "BUY_STOP":
+        order_type = mt5.ORDER_TYPE_BUY_STOP
+    elif side == "SELL_STOP":
+        order_type = mt5.ORDER_TYPE_SELL_STOP
+    else:
+        return False, "Neznámý typ čekajícího příkazu."
+
+    filling = _resolve_filling(symbol)
+
+    request = {
+        "action": mt5.TRADE_ACTION_PENDING,
+        "symbol": symbol,
+        "volume": float(volume),
+        "type": order_type,
+        "price": float(price),
+        "sl": float(sl) if sl else 0.0,
+        "tp": float(tp) if tp else 0.0,
+        "deviation": int(deviation),
+        "magic": MAGIC_NUMBER,
+        "comment": comment,
+        "type_time": mt5.ORDER_TIME_GTC,
+        "type_filling": filling,
+    }
+
+    result = mt5.order_send(request)
+    if result is None:
+        err = mt5.last_error()
+        return False, f"order_send (pending) vrátil None: {err}"
+
+    if result.retcode != mt5.TRADE_RETCODE_DONE:
+        return False, (
+            f"Čekající příkaz zamítnut (retcode {result.retcode}): {result.comment}"
+        )
+
+    return True, (
+        f"Umístěn čekající příkaz {symbol} {side} {volume} lot @ {price:.5f} (ticket: {result.order})"
+    )

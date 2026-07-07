@@ -1,0 +1,421 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Trading_Engine_Ultimate_Matrix_Volume_Edition_Final_Fixed
+
+//@version=5
+indicator("Quantum AI Core - Ultimate Matrix Scanner", overlay=true, max_boxes_count=500, max_labels_count=500, max_lines_count=500)
+
+// =========================================================================
+// 1. INPUTS & NASTAVENÍ
+// =========================================================================
+grp_smc = "SMC & Structure"
+pivot_len = input.int(5, "Pivot Length", group=grp_smc)
+show_obs = input.bool(true, "Show Order Blocks", group=grp_smc)
+show_bos = input.bool(true, "Show BOS/CHoCH", group=grp_smc)
+lookback_zones = input.int(100, "Premium/Discount Lookback", group=grp_smc)
+
+grp_chan = "Predictive Channel (LinReg)"
+chan_len = input.int(100, "Channel Length", group=grp_chan)
+chan_dev = input.float(2.0, "Channel Deviation", group=grp_chan)
+
+grp_trade = "Trade Setup (RRR)"
+rr_ratio1 = input.float(1.0, "TP 1 (R)", group=grp_trade)
+rr_ratio2 = input.float(2.0, "TP 2 (R)", group=grp_trade)
+rr_ratio3 = input.float(3.0, "TP 3 (R)", group=grp_trade)
+
+grp_ui = "Dashboard UI"
+show_scanner = input.bool(true, "Show Multi-TF Scanner (Bottom Right)", group=grp_ui)
+show_vol_panel = input.bool(true, "Show Volume Power Panel (Top Right)", group=grp_ui)
+show_floating_hud = input.bool(true, "Show Floating Price Volume HUD", group=grp_ui)
+fresh_limit = input.int(3, "Fresh Signal Highlight Limit (Bars)", group=grp_ui)
+show_center_alert = input.bool(true, "Show Center Flash Alert Banner", group=grp_ui)
+
+// =========================================================================
+// BEZSTAVOVÁ LOGIKA SCANNERU (Prevence chyb v request.security)
+// =========================================================================
+f_matrix_logic() =>
+    _f = ta.ema(close, 9)
+    _s = ta.ema(close, 21)
+    _b = ta.crossover(_f, _s)
+    _sl = ta.crossunder(_f, _s)
+    _last_b = ta.barssince(_b)
+    _last_s = ta.barssince(_sl)
+    int _cnt = na(_last_b) and na(_last_s) ? 0 : (nz(_last_b, 99999) < nz(_last_s, 99999) ? nz(_last_b) : nz(_last_s))
+    int _st = na(_last_b) and na(_last_s) ? 0 : (nz(_last_b, 99999) < nz(_last_s, 99999) ? 1 : -1)
+    [_st, _cnt]
+
+// =========================================================================
+// UX PALETA BAREV
+// =========================================================================
+c_bull_action = color.rgb(46, 204, 113)   
+c_bear_action = color.rgb(231, 76, 60)    
+c_entry_blue  = color.rgb(52, 152, 219)   
+c_text_muted  = color.rgb(189, 195, 199)  
+
+c_ob_bull_bg  = color.new(color.rgb(41, 128, 185), 92)  
+c_ob_bull_brd = color.new(color.rgb(52, 152, 219), 70)
+c_ob_bear_bg  = color.new(color.rgb(192, 57, 43), 92)   
+c_ob_bear_brd = color.new(color.rgb(231, 76, 60), 70)
+
+c_prem_bg     = color.new(color.rgb(150, 40, 40), 94)   
+c_disc_bg     = color.new(color.rgb(40, 60, 150), 94)   
+
+// =========================================================================
+// GLOBÁLNÍ VÝPOČTY & INSTITUCIONÁLNÍ PODÍL OBJEMU
+// =========================================================================
+atr_val   = ta.atr(14)
+lowest_10 = ta.lowest(low, 10)
+highest_10 = ta.highest(high, 10)
+
+// Výpočet Volume Power Ratio pro aktivní graf
+v_data = nz(volume) > 0 ? volume : 1.0
+v_hl = high - low
+buy_vol_raw = v_hl == 0 ? 0.5 * v_data : v_data * ((close - low) / v_hl)
+sell_vol_raw = v_hl == 0 ? 0.5 * v_data : v_data * ((high - close) / v_hl)
+
+sum_buy_vol = ta.sma(buy_vol_raw, 20)
+sum_sell_vol = ta.sma(sell_vol_raw, 20)
+total_vol_smooth = sum_buy_vol + sum_sell_vol
+
+buy_pct = total_vol_smooth == 0 ? 50.0 : (sum_buy_vol / total_vol_smooth) * 100
+sell_pct = 100.0 - buy_pct
+
+// =========================================================================
+// 2. BARVENÍ SVÍČEK PODLE TRENDU
+// =========================================================================
+ema_trend = ta.ema(close, 20)
+is_up = close > ema_trend
+bar_col = is_up ? (close > open ? color.rgb(52, 152, 219) : color.rgb(41, 128, 185)) : (close < open ? color.rgb(231, 76, 60) : color.rgb(192, 57, 43))
+barcolor(bar_col)
+
+// =========================================================================
+// 3. PREMIUM, DISCOUNT A EQUILIBRIUM ZÓNY
+// =========================================================================
+highest_price = ta.highest(high, lookback_zones)
+lowest_price = ta.lowest(low, lookback_zones)
+equilibrium = (highest_price + lowest_price) / 2
+diff = highest_price - lowest_price
+
+var box box_premium = na
+var box box_discount = na
+var line eq_line = na
+
+if barstate.islast
+    box.delete(box_premium[1])
+    box.delete(box_discount[1])
+    line.delete(eq_line[1])
+    
+    box_premium := box.new(bar_index - lookback_zones, highest_price, bar_index + 20, highest_price - (diff * 0.25), border_color=color.new(color.red, 100), bgcolor=c_prem_bg, text="Premium Zone", text_color=c_text_muted, text_size=size.small, text_halign="center", text_valign="top")
+    box_discount := box.new(bar_index - lookback_zones, lowest_price + (diff * 0.25), bar_index + 20, lowest_price, border_color=color.new(color.blue, 100), bgcolor=c_disc_bg, text="Discount Zone", text_color=c_text_muted, text_size=size.small, text_halign="center", text_valign="bottom")
+    eq_line := line.new(bar_index - lookback_zones, equilibrium, bar_index + 20, equilibrium, color=color.new(color.gray, 60), style=line.style_solid)
+
+// =========================================================================
+// 4. STRUKTURA TRHU (HH, HL) A SUPPORT/RESISTANCE
+// =========================================================================
+ph = ta.pivothigh(high, pivot_len, pivot_len)
+pl = ta.pivotlow(low, pivot_len, pivot_len)
+
+var float last_ph = na, var int last_ph_idx = na
+var float last_pl = na, var int last_pl_idx = na
+
+if not na(ph)
+    is_hh = na(last_ph) ? false : ph > last_ph
+    is_lh = na(last_ph) ? false : ph < last_ph
+    txt = is_hh ? "HH" : (is_lh ? "LH" : "")
+    if str.length(txt) > 0
+        label.new(bar_index - pivot_len, ph, txt, color=color.new(color.white, 100), textcolor=color.rgb(241, 196, 15), style=label.style_none, size=size.tiny)
+    label.new(bar_index - pivot_len, ph, "• Resistance", color=color.new(color.white, 100), textcolor=c_text_muted, style=label.style_label_down, size=size.tiny)
+    last_ph := ph, last_ph_idx := bar_index - pivot_len
+
+if not na(pl)
+    is_hl = na(last_pl) ? false : pl > last_pl
+    is_ll = na(last_pl) ? false : pl < last_pl
+    txt = is_hl ? "HL" : (is_ll ? "LL" : "")
+    if str.length(txt) > 0
+        label.new(bar_index - pivot_len, pl, txt, color=color.new(color.white, 100), textcolor=color.rgb(46, 204, 113), style=label.style_none, size=size.tiny)
+    label.new(bar_index - pivot_len, pl, "• Support", color=color.new(color.white, 100), textcolor=c_text_muted, style=label.style_label_up, size=size.tiny)
+    last_pl := pl, last_pl_idx := bar_index - pivot_len
+
+// =========================================================================
+// 5. SMC: BOS/CHoCH & ORDER BLOCKS
+// =========================================================================
+var int trend_state = 0 
+bull_break = ta.crossover(close, last_ph)
+bear_break = ta.crossunder(close, last_pl)
+
+if bull_break and show_bos
+    line.new(last_ph_idx, last_ph, bar_index, last_ph, color=c_ob_bull_brd, style=line.style_dashed, width=1)
+    label.new(math.round(math.avg(last_ph_idx, bar_index)), last_ph, trend_state == 1 ? "BOS" : "CHoCH", color=color.new(color.black, 20), textcolor=color.white, style=label.style_label_center, size=size.tiny)
+    trend_state := 1
+    if show_obs and not na(last_pl)
+        box.new(last_pl_idx - 1, high[bar_index - last_pl_idx + 1], bar_index + 30, low[bar_index - last_pl_idx + 1], border_color=c_ob_bull_brd, bgcolor=c_ob_bull_bg, text="Internal OB Bullish", text_color=c_text_muted, text_size=size.tiny, text_halign="right", text_valign="bottom")
+    label.new(bar_index, low - atr_val, "Structure Shift: Bullish", color=color.new(color.black, 40), textcolor=c_bull_action, style=label.style_label_up, size=size.small)
+    last_ph := na 
+
+if bear_break and show_bos
+    line.new(last_pl_idx, last_pl, bar_index, last_pl, color=c_ob_bear_brd, style=line.style_dashed, width=1)
+    label.new(math.round(math.avg(last_pl_idx, bar_index)), last_pl, trend_state == -1 ? "BOS" : "CHoCH", color=color.new(color.black, 20), textcolor=color.white, style=label.style_label_center, size=size.tiny)
+    trend_state := -1
+    if show_obs and not na(last_ph)
+        box.new(last_ph_idx - 1, high[bar_index - last_ph_idx + 1], bar_index + 30, low[bar_index - last_ph_idx + 1], border_color=c_ob_bear_brd, bgcolor=c_ob_bear_bg, text="Internal OB Bearish", text_color=c_text_muted, text_size=size.tiny, text_halign="right", text_valign="bottom")
+    label.new(bar_index, high + atr_val, "Structure Shift: Bearish", color=color.new(color.black, 40), textcolor=c_bear_action, style=label.style_label_down, size=size.small)
+    last_pl := na
+
+// =========================================================================
+// 6. PREDIKTIVNÍ KANÁL (LinReg)
+// =========================================================================
+if barstate.islast
+    sum_x = 0.0, sum_y = 0.0, sum_xy = 0.0, sum_x2 = 0.0
+    for i = 0 to chan_len - 1
+        sum_x += i, sum_y += close[i], sum_xy += i * close[i], sum_x2 += i * i
+    slope = (chan_len * sum_xy - sum_x * sum_y) / (chan_len * sum_x2 - sum_x * sum_x)
+    intercept = (sum_y - slope * sum_x) / chan_len
+    
+    dev_sum = 0.0
+    for i = 0 to chan_len - 1
+        dev_sum += math.pow(close[i] - (intercept + slope * i), 2)
+    std_dev = math.sqrt(dev_sum / chan_len) * chan_dev
+    
+    y1_mid = intercept + slope * (chan_len - 1), y2_mid = intercept
+    line.new(bar_index - chan_len + 1, y1_mid + std_dev, bar_index + 10, y2_mid + std_dev, color=color.new(color.rgb(155, 89, 182), 40), style=line.style_dotted, width=2)
+    line.new(bar_index - chan_len + 1, y1_mid - std_dev, bar_index + 10, y2_mid - std_dev, color=color.new(color.rgb(155, 89, 182), 40), style=line.style_dotted, width=2)
+
+// =========================================================================
+// 7. SIGNÁLY A EXEKUCE OBCHODU
+// =========================================================================
+ema_fast = ta.ema(close, 9)
+ema_slow = ta.ema(close, 21)
+buy_signal = ta.crossover(ema_fast, ema_slow)
+sell_signal = ta.crossunder(ema_fast, ema_slow)
+
+plotshape(buy_signal, style=shape.triangleup, location=location.belowbar, color=c_bull_action, size=size.small)
+plotshape(sell_signal, style=shape.triangledown, location=location.abovebar, color=c_bear_action, size=size.small)
+
+var line l_entry = na, var line l_sl = na, var line l_tp1 = na, var line l_tp2 = na, var line l_tp3 = na
+var label lbl_entry = na, var label lbl_sl = na, var label lbl_tp1 = na, var label lbl_tp2 = na, var label lbl_tp3 = na
+
+if buy_signal or sell_signal
+    line.delete(l_entry), line.delete(l_sl), line.delete(l_tp1), line.delete(l_tp2), line.delete(l_tp3)
+    label.delete(lbl_entry), label.delete(lbl_sl), label.delete(lbl_tp1), label.delete(lbl_tp2), label.delete(lbl_tp3)
+    
+    is_long = buy_signal
+    entry_price = close
+    raw_sl = is_long ? lowest_10 : highest_10
+    sl_price = is_long ? math.min(raw_sl, entry_price - atr_val * 0.5) : math.max(raw_sl, entry_price + atr_val * 0.5)
+    risk = math.abs(entry_price - sl_price)
+    
+    tp1_price = is_long ? entry_price + (risk * rr_ratio1) : entry_price - (risk * rr_ratio1)
+    tp2_price = is_long ? entry_price + (risk * rr_ratio2) : entry_price - (risk * rr_ratio2)
+    tp3_price = is_long ? entry_price + (risk * rr_ratio3) : entry_price - (risk * rr_ratio3)
+    
+    l_entry := line.new(bar_index, entry_price, bar_index + 20, entry_price, color=c_entry_blue, style=line.style_solid, width=2)
+    lbl_entry := label.new(bar_index + 20, entry_price, "ENTRY: " + str.tostring(entry_price, "#.##"), color=c_entry_blue, textcolor=color.white, style=label.style_label_left, size=size.small)
+    
+    l_sl := line.new(bar_index, sl_price, bar_index + 20, sl_price, color=c_bear_action, style=line.style_solid, width=2)
+    lbl_sl := label.new(bar_index + 20, sl_price, "STOP LOSS: " + str.tostring(sl_price, "#.##"), color=c_bear_action, textcolor=color.white, style=label.style_label_left, size=size.small)
+    
+    l_tp1 := line.new(bar_index, tp1_price, bar_index + 20, tp1_price, color=c_bull_action, style=line.style_dashed, width=1)
+    lbl_tp1 := label.new(bar_index + 20, tp1_price, "TP 1 (" + str.tostring(rr_ratio1) + "R)", color=color.new(color.black, 50), textcolor=c_bull_action, style=label.style_label_left, size=size.small)
+    
+    l_tp2 := line.new(bar_index, tp2_price, bar_index + 20, tp2_price, color=c_bull_action, style=line.style_dashed, width=1)
+    lbl_tp2 := label.new(bar_index + 20, tp2_price, "TP 2 (" + str.tostring(rr_ratio2) + "R)", color=color.new(color.black, 50), textcolor=c_bull_action, style=label.style_label_left, size=size.small)
+
+    l_tp3 := line.new(bar_index, tp3_price, bar_index + 20, tp3_price, color=c_bull_action, style=line.style_solid, width=2)
+    lbl_tp3 := label.new(bar_index + 20, tp3_price, "TP 3 MAX (" + str.tostring(rr_ratio3) + "R)", color=color.white, style=label.style_label_left, size=size.small)
+
+if not na(l_entry)
+    line.set_x2(l_entry, bar_index + 5), label.set_x(lbl_entry, bar_index + 5)
+    line.set_x2(l_sl, bar_index + 5), label.set_x(lbl_sl, bar_index + 5)
+    line.set_x2(l_tp1, bar_index + 5), label.set_x(lbl_tp1, bar_index + 5)
+    line.set_x2(l_tp2, bar_index + 5), label.set_x(lbl_tp2, bar_index + 5)
+    line.set_x2(l_tp3, bar_index + 5), label.set_x(lbl_tp3, bar_index + 5)
+
+// =========================================================================
+// 8. MULTI-TF MATRIX SCANNER (5 TRVALÝCH SLOUPCŮ: M1, M5, M15, M30, H1)
+// =========================================================================
+[s_xau1, c_xau1] = request.security("OANDA:XAUUSD", "1", f_matrix_logic()), [s_xau5, c_xau5] = request.security("OANDA:XAUUSD", "5", f_matrix_logic()), [s_xau15, c_xau15] = request.security("OANDA:XAUUSD", "15", f_matrix_logic()), [s_xau30, c_xau30] = request.security("OANDA:XAUUSD", "30", f_matrix_logic()), [s_xau60, c_xau60] = request.security("OANDA:XAUUSD", "60", f_matrix_logic())
+[s_eur1, c_eur1] = request.security("FX:EURUSD", "1", f_matrix_logic()),    [s_eur5, c_eur5] = request.security("FX:EURUSD", "5", f_matrix_logic()),    [s_eur15, c_eur15] = request.security("FX:EURUSD", "15", f_matrix_logic()),    [s_eur30, c_eur30] = request.security("FX:EURUSD", "30", f_matrix_logic()),    [s_eur60, c_eur60] = request.security("FX:EURUSD", "60", f_matrix_logic())
+[s_jpy1, c_jpy1] = request.security("FX:USDJPY", "1", f_matrix_logic()),    [s_jpy5, c_jpy5] = request.security("FX:USDJPY", "5", f_matrix_logic()),    [s_jpy15, c_jpy15] = request.security("FX:USDJPY", "15", f_matrix_logic()),    [s_jpy30, c_jpy30] = request.security("FX:USDJPY", "30", f_matrix_logic()),    [s_jpy60, c_jpy60] = request.security("FX:USDJPY", "60", f_matrix_logic())
+[s_ej1,  c_ej1]  = request.security("FX:EURJPY", "1", f_matrix_logic()),    [s_ej5,  c_ej5]  = request.security("FX:EURJPY", "5", f_matrix_logic()),    [s_ej15,  c_ej15]  = request.security("FX:EURJPY", "15", f_matrix_logic()),    [s_ej30,  c_ej30]  = request.security("FX:EURJPY", "30", f_matrix_logic()),    [s_ej60,  c_ej60]  = request.security("FX:EURJPY", "60", f_matrix_logic())
+[s_cad1, c_cad1] = request.security("FX:USDCAD", "1", f_matrix_logic()),    [s_cad5, c_cad5] = request.security("FX:USDCAD", "5", f_matrix_logic()),    [s_cad15, c_cad15] = request.security("FX:USDCAD", "15", f_matrix_logic()),    [s_cad30, c_cad30] = request.security("FX:USDCAD", "30", f_matrix_logic()),    [s_cad60, c_cad60] = request.security("FX:USDCAD", "60", f_matrix_logic())
+[s_gbp1, c_gbp1] = request.security("FX:GBPUSD", "1", f_matrix_logic()),    [s_gbp5, c_gbp5] = request.security("FX:GBPUSD", "5", f_matrix_logic()),    [s_gbp15, c_gbp15] = request.security("FX:GBPUSD", "15", f_matrix_logic()),    [s_gbp30, c_gbp30] = request.security("FX:GBPUSD", "30", f_matrix_logic()),    [s_gbp60, c_gbp60] = request.security("FX:GBPUSD", "60", f_matrix_logic())
+[s_chf1, c_chf1] = request.security("FX:GBPCHF", "1", f_matrix_logic()),    [s_chf5, c_chf5] = request.security("FX:GBPCHF", "5", f_matrix_logic()),    [s_chf15, c_chf15] = request.security("FX:GBPCHF", "15", f_matrix_logic()),    [s_chf30, c_chf30] = request.security("FX:GBPCHF", "30", f_matrix_logic()),    [s_chf60, c_chf60] = request.security("FX:GBPCHF", "60", f_matrix_logic())
+[s_aud1, c_aud1] = request.security("FX:AUDUSD", "1", f_matrix_logic()),    [s_aud5, c_aud5] = request.security("FX:AUDUSD", "5", f_matrix_logic()),    [s_aud15, c_aud15] = request.security("FX:AUDUSD", "15", f_matrix_logic()),    [s_aud30, c_aud30] = request.security("FX:AUDUSD", "30", f_matrix_logic()),    [s_aud60, c_aud60] = request.security("FX:AUDUSD", "60", f_matrix_logic())
+
+var string aggregated_alert_text = ""
+var color final_banner_color = color.rgb(44, 62, 80) 
+var bool any_signal_triggered = false
+
+if show_scanner and barstate.islast
+    aggregated_alert_text := ""
+    any_signal_triggered := false
+    int buy_count = 0
+    int sell_count = 0
+
+    var table scan = table.new(position.bottom_right, 6, 10, bgcolor=color.new(color.rgb(20, 25, 35), 20), border_width=1, border_color=color.rgb(44, 62, 80))
+    table.cell(scan, 0, 0, "QUANTUM ADVANCED MULTI-TF MATRIX SCANNER", text_color=color.white, text_size=size.small, bgcolor=color.rgb(31, 46, 63))
+    table.merge_cells(scan, 0, 0, 5, 0)
+    
+    table.cell(scan, 0, 1, "Instrument", text_color=c_text_muted, text_size=size.small, bgcolor=color.rgb(25, 35, 45))
+    table.cell(scan, 1, 1, "M1", text_color=c_text_muted, text_size=size.small, bgcolor=color.rgb(25, 35, 45))
+    table.cell(scan, 2, 1, "M5", text_color=c_text_muted, text_size=size.small, bgcolor=color.rgb(25, 35, 45))
+    table.cell(scan, 3, 1, "M15", text_color=c_text_muted, text_size=size.small, bgcolor=color.rgb(25, 35, 45))
+    table.cell(scan, 4, 1, "M30", text_color=c_text_muted, text_size=size.small, bgcolor=color.rgb(25, 35, 45))
+    table.cell(scan, 5, 1, "H1", text_color=c_text_muted, text_size=size.small, bgcolor=color.rgb(25, 35, 45))
+    
+    pairs = array.from("XAUUSD", "EURUSD", "USDJPY", "EURJPY", "USDCAD", "GBPUSD", "GBPCHF", "AUDUSD")
+    
+    color row_bg = color.new(color.black, 100)
+
+    for i = 0 to 7
+        p_name = array.get(pairs, i)
+        
+        sig1   = i==0?s_xau1:  i==1?s_eur1:  i==2?s_jpy1:  i==3?s_ej1:  i==4?s_cad1:  i==5?s_gbp1:  i==6?s_chf1:  s_aud1
+        cnt1   = i==0?c_xau1:  i==1?c_eur1:  i==2?c_jpy1:  i==3?c_ej1:  i==4?c_cad1:  i==5?c_gbp1:  i==6?c_chf1:  c_aud1
+        sig5   = i==0?s_xau5:  i==1?s_eur5:  i==2?s_jpy5:  i==3?s_ej5:  i==4?s_cad5:  i==5?s_gbp5:  i==6?s_chf5:  s_aud5
+        cnt5   = i==0?c_xau5:  i==1?c_eur5:  i==2?c_jpy5:  i==3?c_ej5:  i==4?c_cad5:  i==5?c_gbp5:  i==6?c_chf5:  c_aud5
+        sig15  = i==0?s_xau15: i==1?s_eur15: i==2?s_jpy15: i==3?s_ej15: i==4?s_cad15: i==5?s_gbp15: i==6?s_chf15: s_aud15
+        cnt15  = i==0?c_xau15: i==1?c_eur15: i==2?c_jpy15: i==3?c_ej15: i==4?c_cad15: i==5?c_gbp15: i==6?c_chf15: s_aud15
+        sig30  = i==0?s_xau30: i==1?s_eur30: i==2?s_jpy30: i==3?s_ej30: i==4?s_cad30: i==5?s_gbp30: i==6?s_chf30: s_aud30
+        cnt30  = i==0?c_xau30: i==1?c_eur30: i==2?c_jpy30: i==3?c_ej30: i==4?c_cad30: i==5?c_gbp30: i==6?c_chf30: c_aud30
+        sig60  = i==0?s_xau60: i==1?s_eur60: i==2?s_jpy60: i==3?s_ej60: i==4?s_cad60: i==5?s_gbp60: i==6?s_chf60: s_aud60
+        cnt60  = i==0?c_xau60: i==1?c_eur60: i==2?c_jpy60: i==3?c_ej60: i==4?c_cad60: i==5?c_gbp60: i==6?c_chf60: c_aud60
+        
+        is_fresh_buy  = (cnt1 <= fresh_limit and sig1 == 1) or (cnt5 <= fresh_limit and sig5 == 1) or (cnt15 <= fresh_limit and sig15 == 1) or (cnt30 <= fresh_limit and sig30 == 1) or (cnt60 <= fresh_limit and sig60 == 1)
+        is_fresh_sell = (cnt1 <= fresh_limit and sig1 == -1) or (cnt5 <= fresh_limit and sig5 == -1) or (cnt15 <= fresh_limit and sig15 == -1) or (cnt30 <= fresh_limit and sig30 == -1) or (cnt60 <= fresh_limit and sig60 == -1)
+        
+        row_bg := is_fresh_buy ? color.rgb(27, 94, 32) : (is_fresh_sell ? color.rgb(183, 28, 28) : color.new(color.black, 100))
+        
+        if cnt1 == 0
+            any_signal_triggered := true
+            _dir = sig1 == 1 ? "BUY" : "SELL"
+            if _dir == "BUY"
+                buy_count := buy_count + 1
+            else
+                sell_count := sell_count + 1
+            aggregated_alert_text := aggregated_alert_text + (str.length(aggregated_alert_text) > 0 ? "\n" : "") + "⚡ " + p_name + " M1 " + _dir + "! NOW! ⚡"
+            
+        if cnt5 == 0
+            any_signal_triggered := true
+            _dir = sig5 == 1 ? "BUY" : "SELL"
+            if _dir == "BUY"
+                buy_count := buy_count + 1
+            else
+                sell_count := sell_count + 1
+            aggregated_alert_text := aggregated_alert_text + (str.length(aggregated_alert_text) > 0 ? "\n" : "") + "⚡ " + p_name + " M5 " + _dir + "! NOW! ⚡"
+            
+        if cnt15 == 0
+            any_signal_triggered := true
+            _dir = sig15 == 1 ? "BUY" : "SELL"
+            if _dir == "BUY"
+                buy_count := buy_count + 1
+            else
+                sell_count := sell_count + 1
+            aggregated_alert_text := aggregated_alert_text + (str.length(aggregated_alert_text) > 0 ? "\n" : "") + "⚡ " + p_name + " M15 " + _dir + "! NOW! ⚡"
+            
+        if cnt30 == 0
+            any_signal_triggered := true
+            _dir = sig30 == 1 ? "BUY" : "SELL"
+            if _dir == "BUY"
+                buy_count := buy_count + 1
+            else
+                sell_count := sell_count + 1
+            aggregated_alert_text := aggregated_alert_text + (str.length(aggregated_alert_text) > 0 ? "\n" : "") + "⚡ " + p_name + " M30 " + _dir + "! NOW! ⚡"
+            
+        if cnt60 == 0
+            any_signal_triggered := true
+            _dir = sig60 == 1 ? "BUY" : "SELL"
+            if _dir == "BUY"
+                buy_count := buy_count + 1
+            else
+                sell_count := sell_count + 1
+            aggregated_alert_text := aggregated_alert_text + (str.length(aggregated_alert_text) > 0 ? "\n" : "") + "⚡ " + p_name + " H1 " + _dir + "! NOW! ⚡"
+
+        final_banner_color := sell_count > buy_count ? color.rgb(183, 28, 28) : color.rgb(27, 94, 32)
+
+        table.cell(scan, 0, i + 2, p_name, text_color=color.white, text_size=size.small, bgcolor=row_bg)
+        
+        t1 = sig1 == 1 ? "▲ BUY (" + str.tostring(cnt1) + ")" : (sig1 == -1 ? "▼ SELL (" + str.tostring(cnt1) + ")" : "WAIT")
+        table.cell(scan, 1, i + 2, t1, text_color=sig1==1?c_bull_action:(sig1==-1?c_bear_action:c_text_muted), text_size=size.small, bgcolor=row_bg)
+        t5 = sig5 == 1 ? "▲ BUY (" + str.tostring(cnt5) + ")" : (sig5 == -1 ? "▼ SELL (" + str.tostring(cnt5) + ")" : "WAIT")
+        table.cell(scan, 2, i + 2, t5, text_color=sig5==1?c_bull_action:(sig5==-1?c_bear_action:c_text_muted), text_size=size.small, bgcolor=row_bg)
+        t15 = sig15 == 1 ? "▲ BUY (" + str.tostring(cnt15) + ")" : (sig15 == -1 ? "▼ SELL (" + str.tostring(cnt15) + ")" : "WAIT")
+        table.cell(scan, 3, i + 2, t15, text_color=sig15==1?c_bull_action:(sig15==-1?c_bear_action:c_text_muted), text_size=size.small, bgcolor=row_bg)
+        t30 = sig30 == 1 ? "▲ BUY (" + str.tostring(cnt30) + ")" : (sig30 == -1 ? "▼ SELL (" + str.tostring(cnt30) + ")" : "WAIT")
+        table.cell(scan, 4, i + 2, t30, text_color=sig30==1?c_bull_action:(sig30==-1?c_bear_action:c_text_muted), text_size=size.small, bgcolor=row_bg)
+        t60 = sig60 == 1 ? "▲ BUY (" + str.tostring(cnt60) + ")" : (sig60 == -1 ? "▼ SELL (" + str.tostring(cnt60) + ")" : "WAIT")
+        table.cell(scan, 5, i + 2, t60, text_color=sig60==1?c_bull_action:(sig60==-1?c_bear_action:c_text_muted), text_size=size.small, bgcolor=row_bg)
+
+    if show_center_alert and any_signal_triggered
+        var table alert_banner = table.new(position.bottom_center, 1, 1)
+        table.cell(alert_banner, 0, 0, aggregated_alert_text, text_color=color.white, text_size=size.normal, bgcolor=final_banner_color)
+
+// =========================================================================
+// 10. VOLUME POWER PANEL (Vykreslení na aktivním TF - Top Right)
+// =========================================================================
+if show_vol_panel and barstate.islast
+    var table vol_hud = table.new(position.top_right, 3, 2, bgcolor=color.new(color.rgb(20, 25, 35), 20), border_width=1, border_color=color.rgb(44, 62, 80))
+    
+    table.cell(vol_hud, 0, 0, "VOLUME POWER DELTA (20 MA) | " + timeframe.period, text_color=color.white, text_size=size.small, bgcolor=color.rgb(31, 46, 63))
+    table.merge_cells(vol_hud, 0, 0, 2, 0)
+    
+    int b_round = math.round(buy_pct)
+    int s_round = 100 - b_round
+    int green_blocks = math.round(buy_pct / 10)
+    int red_blocks = 10 - green_blocks
+    
+    string bar_visual = ""
+    if green_blocks > 0
+        for b = 1 to green_blocks
+            bar_visual := bar_visual + "■"
+    if red_blocks > 0
+        for r = 1 to red_blocks
+            bar_visual := bar_visual + "□"
+            
+    table.cell(vol_hud, 0, 1, "BULLS: " + str.tostring(b_round) + "%", text_color=c_bull_action, text_size=size.small)
+    table.cell(vol_hud, 1, 1, bar_visual, text_color=color.rgb(241, 196, 15), text_size=size.small)
+    table.cell(vol_hud, 2, 1, "BEARS: " + str.tostring(s_round) + "%", text_color=c_bear_action, text_size=size.small)
+
+// =========================================================================
+// 11. FLOATING PRICE-ACTION VOLUME HUD (Dynamický obdélník u ceny)
+// =========================================================================
+var line real_vol_line = na
+var box real_vol_box = na
+
+if show_floating_hud and barstate.islast
+    line.delete(real_vol_line[1])
+    box.delete(real_vol_box[1])
+
+    bool is_remiza = math.abs(buy_pct - 50.0) <= 3.0
+    
+    color box_bg  = color.rgb(108, 122, 137, 20) 
+    color box_brd = color.rgb(189, 195, 199)
+    
+    if not is_remiza
+        if buy_pct > sell_pct
+            box_bg  := color.new(c_bull_action, 20)
+            box_brd := c_bull_action
+        else
+            box_bg  := color.new(c_bear_action, 20)
+            box_brd := c_bear_action
+
+    string hud_text = "BUY: " + str.tostring(math.round(buy_pct)) + "%\n───────\nSELL: " + str.tostring(math.round(sell_pct)) + "%"
+    
+    int line_start = bar_index
+    int line_end   = bar_index + 12
+    int box_end    = bar_index + 24
+    
+    real_vol_line := line.new(line_start, close, line_end, close, color=box_brd, width=2, style=line.style_dashed)
+    
+    float b_top = close + (atr_val * 0.35)
+    float b_bot = close - (atr_val * 0.35)
+    
+    // OPRAVA: text_valign změněno z nefunkčního "middle" na validní "center"
+    real_vol_box := box.new(line_end, b_top, box_end, b_bot, 
+      bgcolor=box_bg, 
+      border_color=box_brd, 
+      border_width=2,
+      text=hud_text, 
+      text_color=color.white, 
+      text_size=size.small, 
+      text_halign="center", 
+      text_valign="center")

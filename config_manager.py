@@ -27,13 +27,13 @@ CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.j
 # Cesta k terminálu MT5 — detekce typické instalace, s fallbackem.
 _DEFAULT_TERMINAL = r"C:\Program Files\MetaTrader 5\terminal64.exe"
 
-# Výchozí symboly s rozumnými hodnotami (SL/TP jsou absolutní cenové hladiny).
+# Výchozí symboly s rozumnými hodnotami (SL/TP jsou v bodech/offsets).
 _DEFAULT_SYMBOLS: dict[str, dict[str, Any]] = {
-    "XAUUSD": {"position_count": 1, "lot_size": 0.01, "sl": 2000.00, "tp": 2050.00, "deviation": 20},
-    "EURUSD": {"position_count": 1, "lot_size": 0.10, "sl": 1.0800, "tp": 1.0900, "deviation": 20},
-    "USDJPY": {"position_count": 1, "lot_size": 0.10, "sl": 150.00, "tp": 152.00, "deviation": 20},
-    "AUDUSD": {"position_count": 1, "lot_size": 0.10, "sl": 0.6500, "tp": 0.6600, "deviation": 20},
-    "USDCAD": {"position_count": 1, "lot_size": 0.10, "sl": 1.3500, "tp": 1.3600, "deviation": 20},
+    "XAUUSD": {"position_count": 1, "lot_size": 0.01, "sl": 200.0, "tp": 400.0, "deviation": 20},
+    "EURUSD": {"position_count": 1, "lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
+    "USDJPY": {"position_count": 1, "lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
+    "AUDUSD": {"position_count": 1, "lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
+    "USDCAD": {"position_count": 1, "lot_size": 0.10, "sl": 150.0, "tp": 300.0, "deviation": 20},
 }
 
 

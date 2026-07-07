@@ -260,9 +260,20 @@ class MainWindow(QMainWindow):
             )
             if confirm != QMessageBox.StandardButton.Yes:
                 return
+        # Potvrzení pro CLOSE V ZISKU.
+        elif action == "close_profitable":
+            confirm = QMessageBox.question(
+                self, "Potvrzení — CLOSE V ZISKU",
+                "Opravdu zavřít všechny ziskové pozice na účtu?\n\n"
+                "Tato akce nelze vrátit zpět.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if confirm != QMessageBox.StandardButton.Yes:
+                return
 
         # Zablokuj tlačítka aktivního panelu.
-        active_panel = self._panels.get(params.get("symbol", ""))
+        active_panel = self._panels.get(self._current_symbol())
         if active_panel:
             active_panel.set_busy(True)
 

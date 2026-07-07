@@ -58,9 +58,29 @@ class SymbolPanel(QWidget):
         return (
             "QSpinBox, QDoubleSpinBox {"
             "  background:#1e293b; color:#f8fafc; border:1px solid #334155;"
-            "  border-radius:3px; padding:1px 4px; max-height:22px; font-size:11px;"
+            "  border-radius:3px; padding:1px 18px 1px 4px; max-height:22px; font-size:11px;"
             "}"
             "QSpinBox:focus, QDoubleSpinBox:focus { border-color:#38bdf8; }"
+            "QSpinBox::up-button, QDoubleSpinBox::up-button {"
+            "  subcontrol-origin: border; subcontrol-position: top right; width: 14px;"
+            "  border-left: 1px solid #334155; border-bottom: 1px solid #334155; background: #1e293b;"
+            "  border-top-right-radius: 3px;"
+            "}"
+            "QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover { background: #334155; }"
+            "QSpinBox::down-button, QDoubleSpinBox::down-button {"
+            "  subcontrol-origin: border; subcontrol-position: bottom right; width: 14px;"
+            "  border-left: 1px solid #334155; background: #1e293b;"
+            "  border-bottom-right-radius: 3px;"
+            "}"
+            "QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover { background: #334155; }"
+            "QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {"
+            "  width: 0; height: 0; border-left: 3px solid transparent; border-right: 3px solid transparent;"
+            "  border-bottom: 4px solid #94a3b8;"
+            "}"
+            "QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {"
+            "  width: 0; height: 0; border-left: 3px solid transparent; border-right: 3px solid transparent;"
+            "  border-top: 4px solid #94a3b8;"
+            "}"
         )
 
     @staticmethod
@@ -110,7 +130,7 @@ class SymbolPanel(QWidget):
         self.count_spin = QSpinBox()
         self.count_spin.setRange(1, 100)
         self.count_spin.setStyleSheet(spin_ss)
-        self.count_spin.setFixedWidth(52)
+        self.count_spin.setFixedWidth(60)
         self.count_spin.setFixedHeight(22)
 
         self.lot_spin = QDoubleSpinBox()
@@ -118,7 +138,7 @@ class SymbolPanel(QWidget):
         self.lot_spin.setRange(0.01, 1000.0)
         self.lot_spin.setSingleStep(0.01)
         self.lot_spin.setStyleSheet(spin_ss)
-        self.lot_spin.setFixedWidth(62)
+        self.lot_spin.setFixedWidth(72)
         self.lot_spin.setFixedHeight(22)
         self.lot_spin.valueChanged.connect(self._update_sl_tp_labels)
 
@@ -126,7 +146,7 @@ class SymbolPanel(QWidget):
         self.dev_spin.setRange(0, 10000)
         self.dev_spin.setSingleStep(5)
         self.dev_spin.setStyleSheet(spin_ss)
-        self.dev_spin.setFixedWidth(52)
+        self.dev_spin.setFixedWidth(60)
         self.dev_spin.setFixedHeight(22)
         self.dev_spin.setToolTip("Slippage v bodech")
 
@@ -183,7 +203,7 @@ class SymbolPanel(QWidget):
         self.sl_spin.setRange(0, 100000)
         self.sl_spin.setSingleStep(10)
         self.sl_spin.setStyleSheet(spin_ss)
-        self.sl_spin.setFixedWidth(65)
+        self.sl_spin.setFixedWidth(75)
         self.sl_spin.setFixedHeight(22)
         self.sl_spin.valueChanged.connect(self._update_sl_tp_labels)
 
@@ -205,7 +225,7 @@ class SymbolPanel(QWidget):
         self.tp_spin.setRange(0, 100000)
         self.tp_spin.setSingleStep(10)
         self.tp_spin.setStyleSheet(spin_ss)
-        self.tp_spin.setFixedWidth(65)
+        self.tp_spin.setFixedWidth(75)
         self.tp_spin.setFixedHeight(22)
         self.tp_spin.valueChanged.connect(self._update_sl_tp_labels)
 
@@ -405,7 +425,7 @@ class SymbolPanel(QWidget):
         self.stop_sl_spin.setRange(0, 100000)
         self.stop_sl_spin.setSingleStep(10)
         self.stop_sl_spin.setStyleSheet(spin_ss)
-        self.stop_sl_spin.setFixedWidth(65)
+        self.stop_sl_spin.setFixedWidth(75)
         self.stop_sl_spin.setFixedHeight(22)
         self.stop_sl_spin.valueChanged.connect(self._update_stop_lbls)
 
@@ -427,7 +447,7 @@ class SymbolPanel(QWidget):
         self.stop_tp_spin.setRange(0, 100000)
         self.stop_tp_spin.setSingleStep(10)
         self.stop_tp_spin.setStyleSheet(spin_ss)
-        self.stop_tp_spin.setFixedWidth(65)
+        self.stop_tp_spin.setFixedWidth(75)
         self.stop_tp_spin.setFixedHeight(22)
         self.stop_tp_spin.valueChanged.connect(self._update_stop_lbls)
 

@@ -57,7 +57,7 @@ QLabel#priceLabel {
 }
 
 /* Inputs styling */
-QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+QLineEdit, QComboBox {
     background-color: #1e293b; /* slate 800 */
     border: 1px solid #475569; /* slate 600 */
     border-radius: 4px;
@@ -67,9 +67,66 @@ QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
     selection-background-color: #3b82f6;
 }
 
-QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+QLineEdit:focus, QComboBox:focus {
     border: 1px solid #38bdf8;
     background-color: #1e293b;
+}
+
+QSpinBox, QDoubleSpinBox {
+    background-color: #1e293b; /* slate 800 */
+    border: 1px solid #475569; /* slate 600 */
+    border-radius: 4px;
+    padding: 3px 18px 3px 6px; /* Space for buttons on the right */
+    color: #f8fafc; /* slate 50 */
+    min-height: 18px;
+    selection-background-color: #3b82f6;
+}
+
+QSpinBox:focus, QDoubleSpinBox:focus {
+    border: 1px solid #38bdf8;
+}
+
+QSpinBox::up-button, QDoubleSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 14px;
+    border-left: 1px solid #475569;
+    border-bottom: 1px solid #475569;
+    background-color: #1e293b;
+    border-top-right-radius: 3px;
+}
+
+QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover {
+    background-color: #334155;
+}
+
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 14px;
+    border-left: 1px solid #475569;
+    background-color: #1e293b;
+    border-bottom-right-radius: 3px;
+}
+
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {
+    background-color: #334155;
+}
+
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+    width: 0;
+    height: 0;
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-bottom: 4px solid #94a3b8;
+}
+
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+    width: 0;
+    height: 0;
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-top: 4px solid #94a3b8;
 }
 
 QComboBox QAbstractItemView {
